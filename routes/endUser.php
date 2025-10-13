@@ -2,51 +2,86 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-
-use App\Http\Controllers\AuthController; // Auth cho End User
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\OrderController;
-use App\Http\Controllers\ReviewController;
-use App\Http\Controllers\AddressController; // Quản lý địa chỉ cho End User
+use App\Http\Controllers\ProductReviewController;
+use App\Http\Controllers\AddressController;
+use App\Http\Controllers\WishlistController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\ShipmentController;
 
-// Auth cho End User
+// Auth routes for End User
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
+Route::post('/logout-all', [AuthController::class, 'logoutAll'])->middleware('auth:sanctum');
+Route::get('/me', [AuthController::class, 'me'])->middleware('auth:sanctum');
 
-// Các route yêu cầu End User đã đăng nhập
+// Protected routes that require authentication
 Route::middleware('auth:sanctum')->group(function () {
-    // Quản lý tài khoản người dùng (thông tin cá nhân, địa chỉ)
+    // User profile information
     Route::get('/user', function (Request $request) {
-        return $request->user()->load('role', 'addresses'); // Load thêm quan hệ
+        return $request->user()->load('role', 'addresses');
     });
-    Route::apiResource('addresses', AddressController::class); // CRUD địa chỉ
-
-    // Giỏ hàng
+    
+    // Wishlist routes
+    Route::get('/wishlist', [WishlistController::class, 'index']);
+    Route::post('/wishlist', [WishlistController::class, 'store']);
+    Route::delete('/wishlist/{productId}', [WishlistController::class, 'destroy']);
+    Route::post('/wishlist/toggle', [WishlistController::class, 'toggle']);
+    Route::get('/wishlist/count', [WishlistController::class, 'count']);
+    Route::post('/wishlist/move-to-cart', [WishlistController::class, 'moveToCart']);
+    Route::delete('/wishlist/clear', [WishlistController::class, 'clear']);
+    
+    // Notification routes
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::get('/notifications/unread', [NotificationController::class, 'unread']);
+    Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
+    Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+    Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllAsRead']);
+    Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
+    Route::get('/notifications/stats', [NotificationController::class, 'stats']);
+    
+    // Address routes
+    Route::apiResource('addresses', AddressController::class);
+    
+    // Cart routes
     Route::get('/cart', [CartController::class, 'show']);
-    Route::post('/cart/add', [CartController::class, 'add']);
-    Route::put('/cart/update/{variantId}', [CartController::class, 'update']);
-    Route::delete('/cart/remove/{variantId}', [CartController::class, 'remove']);
-    Route::post('/cart/clear', [CartController::class, 'clear']);
-
-    // Đặt mua sản phẩm
-    Route::post('/orders', [OrderController::class, 'store']); // Tạo đơn hàng từ giỏ hàng
-    Route::get('/orders', [OrderController::class, 'index']); // Lịch sử đơn hàng của user
-    Route::get('/orders/{id}', [OrderController::class, 'show']); // Chi tiết đơn hàng
-
-    // Thanh toán đơn hàng (chỉ khi đơn hàng ở trạng thái pending_payment)
-    Route::post('/orders/{id}/pay', [OrderController::class, 'pay']);
-
-    // Bình luận (Review) sản phẩm
-    Route::post('/products/{productId}/reviews', [ReviewController::class, 'store']);
+    Route::post('/cart', [CartController::class, 'store']);
+    Route::put('/cart/{cartDetailId}', [CartController::class, 'update']);
+    Route::delete('/cart/{cartDetailId}', [CartController::class, 'destroy']);
+    Route::delete('/cart', [CartController::class, 'clear']);
+    
+    // Order routes
+    Route::get('/orders', [OrderController::class, 'index']);
+    Route::get('/orders/{id}', [OrderController::class, 'show']);
+    Route::post('/orders', [OrderController::class, 'store']);
+    Route::post('/orders/{id}/cancel', [OrderController::class, 'cancel']);
+    
+    // Payment routes
+    Route::post('/payments', [PaymentController::class, 'store']);
+    Route::get('/payments/{id}', [PaymentController::class, 'show']);
+    
+    // Shipment tracking
+    Route::get('/shipments/{orderId}', [ShipmentController::class, 'show']);
+    
+    // Product review routes
+    Route::post('/products/{productId}/reviews', [ProductReviewController::class, 'store']);
+    Route::put('/reviews/{id}', [ProductReviewController::class, 'update']);
+    Route::delete('/reviews/{id}', [ProductReviewController::class, 'destroy']);
 });
 
-// Xem sản phẩm (không cần đăng nhập)
-Route::get('/products', [ProductController::class, 'index']); // Danh sách sản phẩm (có thể có filter, search)
-Route::get('/products/{slug}', [ProductController::class, 'show']); // Chi tiết sản phẩm (bao gồm biến thể, hình ảnh, reviews)
-Route::get('/categories', [ProductController::class, 'categories']); // Danh sách danh mục
+// Public routes (no authentication required)
+// Products
+Route::get('/products', [ProductController::class, 'index']);
+Route::get('/products/{id}', [ProductController::class, 'show']);
+Route::get('/products/slug/{slug}', [ProductController::class, 'showBySlug']);
 
-// Quản lý kho (chỉ cho Admin, đã định nghĩa trong routes/admin.php)
-// Quản lý vận chuyển (chỉ cho Admin, đã định nghĩa trong routes/admin.php)
-// Quản lý bình luận, đánh giá (Admin xem/duyệt, End User tạo, đã định nghĩa ở 2 nơi)
+// Categories
+Route::get('/categories', [CategoryController::class, 'index']);
+Route::get('/categories/{id}', [CategoryController::class, 'show']);
+Route::get('/categories/{id}/products', [CategoryController::class, 'products']);

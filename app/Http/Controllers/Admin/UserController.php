@@ -2,24 +2,37 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Http\Controllers\Controller;
+use Illuminate\Routing\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use App\Http\Requests\Admin\UpdateUserRequest;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
 
 class UserController extends Controller
 {
     /**
+     * Get authenticated admin user ID
+     */
+    private function getAuthenticatedUserId(): int
+    {
+        $userId = Auth::id();
+        if (!$userId) {
+            throw new \Exception('Admin not authenticated');
+        }
+        return $userId;
+    }
+
+    /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(): JsonResponse
     {
-        // Lấy tất cả người dùng, loại trừ Admin và những người đã bị xóa mềm
-        $users = User::where('id', '!=', auth()->id()) // Không hiển thị chính admin đang đăng nhập
-                     ->where('role_id', '!=', 1) // Không hiển thị các Admin khác (nếu có)
-                     ->whereNull('deleted_at') // Chỉ lấy những người chưa bị xóa mềm
-                     ->with('role') // Tải kèm thông tin role
+        // Get all users, excluding Admins and soft deleted users
+        $users = User::where('id', '!=', $this->getAuthenticatedUserId()) // Don't show current admin
+                     ->where('role_id', '!=', 1) // Don't show other Admins
+                     ->whereNull('deleted_at') // Only non-deleted users
+                     ->with('role') // Load role information
                      ->get();
 
         return response()->json($users);
@@ -28,14 +41,14 @@ class UserController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function show(string $id): JsonResponse
     {
         $user = User::where('id', $id)
-                    ->where('id', '!=', auth()->id())
+                    ->where('id', '!=', $this->getAuthenticatedUserId())
                     ->where('role_id', '!=', 1)
                     ->whereNull('deleted_at')
                     ->with('role', 'addresses')
-                    ->firstOrFail(); // Trả về 404 nếu không tìm thấy
+                    ->firstOrFail(); // Return 404 if not found
 
         return response()->json($user);
     }
@@ -43,40 +56,50 @@ class UserController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateUserRequest $request, string $id)
+    public function update(Request $request, string $id): JsonResponse
     {
         $user = User::where('id', $id)
-                    ->where('id', '!=', auth()->id())
+                    ->where('id', '!=', $this->getAuthenticatedUserId())
                     ->where('role_id', '!=', 1)
                     ->whereNull('deleted_at')
                     ->firstOrFail();
 
-        $data = $request->validated();
+        // Basic validation
+        $request->validate([
+            'full_name' => 'sometimes|string|max:255',
+            'email' => 'sometimes|email|unique:Users,email,' . $id,
+            'phone_number' => 'sometimes|nullable|string|max:20',
+            'status' => 'sometimes|in:active,inactive,banned'
+        ]);
 
-        // Cập nhật các trường có thể thay đổi
+        $data = $request->all();
+
+        // Update allowed fields
         $user->full_name = $data['full_name'] ?? $user->full_name;
-        $user->email = $data['email'] ?? $user->email; // Cần validation email unique
+        $user->email = $data['email'] ?? $user->email;
         $user->phone_number = $data['phone_number'] ?? $user->phone_number;
         $user->status = $data['status'] ?? $user->status;
-        // Có thể thêm logic đổi mật khẩu nếu cần
 
         $user->save();
 
-        return response()->json(['message' => 'User updated successfully.', 'user' => $user->load('role')]);
+        return response()->json([
+            'message' => 'User updated successfully.',
+            'user' => $user->load('role')
+        ]);
     }
 
     /**
      * Remove the specified resource from storage (Soft Delete).
      */
-    public function destroy(string $id)
+    public function destroy(string $id): JsonResponse
     {
         $user = User::where('id', $id)
-                    ->where('id', '!=', auth()->id())
+                    ->where('id', '!=', $this->getAuthenticatedUserId())
                     ->where('role_id', '!=', 1)
                     ->whereNull('deleted_at')
                     ->firstOrFail();
 
-        $user->delete(); // Thực hiện soft delete
+        $user->delete(); // Perform soft delete
 
         return response()->json(['message' => 'User deleted successfully.']);
     }
