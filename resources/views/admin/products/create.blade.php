@@ -207,4 +207,3 @@ document.addEventListener('click', function(e) {
 });
 </script>
 @endpush
-@endsection
