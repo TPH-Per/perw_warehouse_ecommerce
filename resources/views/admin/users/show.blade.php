@@ -120,11 +120,13 @@
                             @if($user->status === 'active')
                             <form action="{{ route('admin.users.suspend', $user) }}" method="POST" class="d-inline">
                                 @csrf
+                                @method('PUT')
                                 <button type="submit" class="btn btn-warning" onclick="return confirm('Are you sure you want to suspend this user?')">Suspend User</button>
                             </form>
                             @else
                             <form action="{{ route('admin.users.activate', $user) }}" method="POST" class="d-inline">
                                 @csrf
+                                @method('PUT')
                                 <button type="submit" class="btn btn-success" onclick="return confirm('Are you sure you want to activate this user?')">Activate User</button>
                             </form>
                             @endif

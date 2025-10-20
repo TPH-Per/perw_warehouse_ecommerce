@@ -18,6 +18,13 @@
                        placeholder="Tên sản phẩm hoặc mã sản phẩm..."
                        value="{{ request('search') }}">
             </div>
+
+            @php
+                $user = auth()->user();
+                $isWarehouseSpecificManager = $user && $user->role->name === 'Inventory Manager' && $user->warehouse_id;
+            @endphp
+
+            @if(!$isWarehouseSpecificManager)
             <div class="col-md-3">
                 <label class="form-label">Kho hàng</label>
                 <select class="form-select" name="warehouse_id">
@@ -30,6 +37,8 @@
                     @endforeach
                 </select>
             </div>
+            @endif
+
             <div class="col-md-2">
                 <label class="form-label">Trạng thái tồn kho</label>
                 <select class="form-select" name="stock_status">
@@ -60,7 +69,9 @@
                     <tr>
                         <th>Sản phẩm</th>
                         <th>Mã sản phẩm</th>
+                        @if(!$isWarehouseSpecificManager)
                         <th>Kho hàng</th>
+                        @endif
                         <th>Hiện có</th>
                         <th>Đã đặt</th>
                         <th>Có sẵn</th>
@@ -83,7 +94,9 @@
                             <small class="text-muted">{{ $inventory->productVariant->name }}</small>
                         </td>
                         <td>{{ $inventory->productVariant->sku }}</td>
+                        @if(!$isWarehouseSpecificManager)
                         <td>{{ $inventory->warehouse->name }}</td>
+                        @endif
                         <td><strong>{{ $inventory->quantity_on_hand }}</strong></td>
                         <td>{{ $inventory->quantity_reserved }}</td>
                         <td>

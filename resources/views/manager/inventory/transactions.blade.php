@@ -26,11 +26,11 @@
             </div>
             <div class="col-md-2">
                 <label class="form-label">Loại</label>
-                <select class="form-select" name="transaction_type">
+                <select class="form-select" name="type">
                     <option value="">Tất cả các loại</option>
-                    <option value="inbound" {{ request('transaction_type') == 'inbound' ? 'selected' : '' }}>Nhập kho</option>
-                    <option value="outbound" {{ request('transaction_type') == 'outbound' ? 'selected' : '' }}>Xuất kho</option>
-                    <option value="adjustment" {{ request('transaction_type') == 'adjustment' ? 'selected' : '' }}>Điều chỉnh</option>
+                    <option value="inbound" {{ request('type') == 'inbound' ? 'selected' : '' }}>Nhập kho</option>
+                    <option value="outbound" {{ request('type') == 'outbound' ? 'selected' : '' }}>Xuất kho</option>
+                    <option value="adjustment" {{ request('type') == 'adjustment' ? 'selected' : '' }}>Điều chỉnh</option>
                 </select>
             </div>
             <div class="col-md-2">
@@ -82,12 +82,12 @@
                         <td>{{ $transaction->inventory->warehouse->name }}</td>
                         <td>
                             <span class="badge
-                                @if($transaction->transaction_type == 'inbound') bg-success
-                                @elseif($transaction->transaction_type == 'outbound') bg-danger
+                                @if($transaction->type == 'inbound') bg-success
+                                @elseif($transaction->type == 'outbound') bg-danger
                                 @else bg-warning
                                 @endif">
-                                @if($transaction->transaction_type == 'inbound') Nhập kho
-                                @elseif($transaction->transaction_type == 'outbound') Xuất kho
+                                @if($transaction->type == 'inbound') Nhập kho
+                                @elseif($transaction->type == 'outbound') Xuất kho
                                 @else Điều chỉnh
                                 @endif
                             </span>

@@ -155,9 +155,8 @@ class DirectSalesController extends Controller
                     'product_variant_id' => $item['variant']->id,
                     'warehouse_id' => $warehouseId,
                     'order_id' => $order->id,
-                    'transaction_type' => 'sale',
-                    'quantity_change' => -$item['quantity'],
-                    'quantity_after' => $item['inventory']->quantity_on_hand,
+                    'type' => 'outbound',
+                    'quantity' => -$item['quantity'],
                     'notes' => "Direct sale - Order {$orderCode}",
                 ]);
             }

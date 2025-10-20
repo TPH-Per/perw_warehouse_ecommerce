@@ -27,6 +27,11 @@ class PerWDatabaseSeeder extends Seeder
             'description' => 'Quản trị viên hệ thống, có toàn quyền.'
         ]);
 
+        $managerRole = Role::factory()->create([
+            'name' => 'Inventory Manager',
+            'description' => 'Quản lý kho và hàng tồn kho.'
+        ]);
+
         $userRole = Role::factory()->create([
             'name' => 'End User',
             'description' => 'Khách hàng mua sắm trên trang web.'
@@ -95,6 +100,27 @@ class PerWDatabaseSeeder extends Seeder
             'email' => 'admin@perw.com',
             'password' => bcrypt('password'),
             'phone_number' => '0900000001',
+            'status' => 'active'
+        ]);
+
+        // Create warehouse-specific managers
+        $phucHung = User::factory()->create([
+            'role_id' => $managerRole->id,
+            'warehouse_id' => $hcmWarehouse->id,
+            'full_name' => 'Phúc Hưng',
+            'email' => 'phuc.hung@perw.com',
+            'password' => bcrypt('password'),
+            'phone_number' => '0900000003',
+            'status' => 'active'
+        ]);
+
+        $tung = User::factory()->create([
+            'role_id' => $managerRole->id,
+            'warehouse_id' => $hanoiWarehouse->id,
+            'full_name' => 'Tùng',
+            'email' => 'tung@perw.com',
+            'password' => bcrypt('password'),
+            'phone_number' => '0900000004',
             'status' => 'active'
         ]);
 

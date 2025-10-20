@@ -19,10 +19,10 @@ class AddressFactory extends Factory
         return [
             'user_id' => \App\Models\User::factory(),
             'recipient_name' => $this->faker->name,
-            'recipient_phone' => $this->faker->phoneNumber,
+            'recipient_phone' => $this->faker->numerify('0#########'),
             'street_address' => $this->faker->streetAddress,
             'ward' => $this->faker->citySuffix,
-            'district' => $this->faker->state,
+            'district' => $this->faker->city,
             'city' => $this->faker->city,
             'is_default' => $this->faker->boolean,
         ];

@@ -160,6 +160,7 @@
                                     @if($user->status == 'active')
                                         <form action="{{ route('admin.users.suspend', $user->id) }}" method="POST" class="d-inline">
                                             @csrf
+                                            @method('PUT')
                                             <button type="submit" class="btn btn-danger" title="Suspend"
                                                     onclick="return confirm('Suspend this user?')">
                                                 <i class="bi bi-lock"></i>
@@ -168,6 +169,7 @@
                                     @else
                                         <form action="{{ route('admin.users.activate', $user->id) }}" method="POST" class="d-inline">
                                             @csrf
+                                            @method('PUT')
                                             <button type="submit" class="btn btn-success" title="Activate"
                                                     onclick="return confirm('Activate this user?')">
                                                 <i class="bi bi-unlock"></i>

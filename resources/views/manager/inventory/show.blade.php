@@ -13,6 +13,11 @@
     </a>
 </div>
 
+@php
+    $user = auth()->user();
+    $isWarehouseSpecificManager = $user && $user->role->name === 'Inventory Manager' && $user->warehouse_id;
+@endphp
+
 <div class="row">
     <!-- Inventory Info -->
     <div class="col-lg-8">
@@ -34,10 +39,12 @@
                         <strong>Mã sản phẩm:</strong><br>
                         {{ $inventory->productVariant->sku }}
                     </div>
+                    @if(!$isWarehouseSpecificManager)
                     <div class="col-md-6 mb-3">
                         <strong>Kho hàng:</strong><br>
                         {{ $inventory->warehouse->name }}
                     </div>
+                    @endif
                     <div class="col-md-3 mb-3">
                         <strong>Hiện có:</strong><br>
                         <span class="h4">{{ $inventory->quantity_on_hand }}</span>
@@ -97,12 +104,12 @@
                                 <td>{{ $transaction->created_at->format('d M, Y H:i') }}</td>
                                 <td>
                                     <span class="badge
-                                        @if($transaction->transaction_type == 'inbound') bg-success
-                                        @elseif($transaction->transaction_type == 'outbound') bg-danger
+                                        @if($transaction->type == 'inbound') bg-success
+                                        @elseif($transaction->type == 'outbound') bg-danger
                                         @else bg-warning
                                         @endif">
-                                        @if($transaction->transaction_type == 'inbound') Nhập kho
-                                        @elseif($transaction->transaction_type == 'outbound') Xuất kho
+                                        @if($transaction->type == 'inbound') Nhập kho
+                                        @elseif($transaction->type == 'outbound') Xuất kho
                                         @else Điều chỉnh
                                         @endif
                                     </span>
@@ -142,7 +149,7 @@
                     @csrf
                     <div class="mb-3">
                         <label class="form-label">Loại giao dịch</label>
-                        <select class="form-select" name="transaction_type" required>
+                        <select class="form-select" name="type" required>
                             <option value="inbound">Nhập kho (Thêm hàng tồn)</option>
                             <option value="outbound">Xuất kho (Giảm hàng tồn)</option>
                             <option value="adjustment">Điều chỉnh</option>
@@ -167,7 +174,8 @@
             </div>
         </div>
 
-        <!-- Transfer Inventory -->
+        <!-- Transfer Inventory (Only for admins) -->
+        @if(!$isWarehouseSpecificManager)
         <div class="card">
             <div class="card-header bg-success text-white">
                 <i class="bi bi-arrow-left-right"></i> Chuyển đến Kho hàng khác
@@ -203,6 +211,7 @@
                 </form>
             </div>
         </div>
+        @endif
     </div>
 </div>
 @endsection

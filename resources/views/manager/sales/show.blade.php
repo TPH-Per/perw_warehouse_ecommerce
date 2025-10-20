@@ -118,9 +118,9 @@
                                 </td>
                                 <td>{{ $transaction->warehouse->name }}</td>
                                 <td>
-                                    <span class="badge bg-danger">{{ $transaction->quantity_change }}</span>
+                                    <span class="badge bg-danger">{{ $transaction->quantity }}</span>
                                 </td>
-                                <td>{{ $transaction->quantity_after }}</td>
+                                <td>N/A</td>
                                 <td><small>{{ $transaction->notes }}</small></td>
                             </tr>
                             @endforeach

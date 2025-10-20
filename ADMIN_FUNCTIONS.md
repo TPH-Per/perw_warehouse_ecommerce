@@ -225,11 +225,11 @@ Provides helper methods for all admin controllers:
 
 **`suspend(User $user)`**
 - Suspends user account
-- Route: `POST /admin/users/{user}/suspend`
+- Route: `PUT /admin/users/{user}/suspend`
 
 **`activate(User $user)`**
 - Activates user account
-- Route: `POST /admin/users/{user}/activate`
+- Route: `PUT /admin/users/{user}/activate`
 
 **`destroy(User $user)`**
 - Deletes user (only if no orders)
@@ -271,7 +271,7 @@ Provides helper methods for all admin controllers:
 
 **`adjust(Request $request, Inventory $inventory)`**
 - Adjusts inventory quantity
-- Required: `quantity`, `transaction_type` (inbound/outbound/adjustment)
+- Required: `quantity`, `type` (inbound/outbound/adjustment)
 - Optional: `reference_number`, `notes`
 - Route: `POST /admin/inventory/{inventory}/adjust`
 
@@ -295,7 +295,7 @@ Provides helper methods for all admin controllers:
 
 **`transactions(Request $request)`**
 - Lists inventory transactions with filtering
-- Filters: `warehouse_id`, `transaction_type`, `date_from`, `date_to`
+- Filters: `warehouse_id`, `type`, `date_from`, `date_to`
 - Route: `GET /admin/inventory/transactions`
 
 **`export(Request $request)`**
@@ -420,7 +420,7 @@ Content-Type: application/json
 
 {
   "quantity": 50,
-  "transaction_type": "inbound",
+  "type": "inbound",
   "reference_number": "PO-12345",
   "notes": "New stock arrival"
 }

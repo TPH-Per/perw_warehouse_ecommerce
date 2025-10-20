@@ -8,6 +8,7 @@ use App\Models\Supplier;
 use App\Models\ProductVariant;
 use App\Models\ProductImage;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
@@ -45,13 +46,47 @@ class ProductAdminController extends AdminController
             $query->where('status', $request->status);
         }
 
+        // Filter products by user's assigned warehouse if they are a warehouse-specific manager
+        $user = Auth::user();
+        if ($user && $user->role->name === 'Inventory Manager' && $user->warehouse_id) {
+            // Only show products that have inventory in the user's assigned warehouse
+            $query->whereHas('variants.inventories', function($q) use ($user) {
+                $q->where('warehouse_id', $user->warehouse_id);
+            });
+        }
+
         $products = $query->paginate(20);
         $categories = Category::all();
         $suppliers = Supplier::all();
 
         // Return appropriate view based on user role
-        $viewPrefix = auth()->user()->role->name === 'Manager' ? 'manager' : 'admin';
+        $viewPrefix = ($user && ($user->role->name === 'Manager' || $user->role->name === 'Inventory Manager')) ? 'manager' : 'admin';
         return view("{$viewPrefix}.products.index", compact('products', 'categories', 'suppliers'));
+    }
+
+    /**
+     * Display the specified product
+     */
+    public function show(Product $product)
+    {
+        // Check if user has access to this product
+        $user = Auth::user();
+        if ($user && $user->role->name === 'Inventory Manager' && $user->warehouse_id) {
+            // Check if this product has inventory in the user's assigned warehouse
+            $hasInventoryInWarehouse = $product->variants()->whereHas('inventories', function($q) use ($user) {
+                $q->where('warehouse_id', $user->warehouse_id);
+            })->exists();
+
+            if (!$hasInventoryInWarehouse) {
+                abort(403, 'Unauthorized access to this product.');
+            }
+        }
+
+        $product->load(['category', 'supplier', 'variants.inventories.warehouse', 'images']);
+
+        // Return appropriate view based on user role
+        $viewPrefix = ($user && ($user->role->name === 'Manager' || $user->role->name === 'Inventory Manager')) ? 'manager' : 'admin';
+        return view("{$viewPrefix}.products.show", compact('product'));
     }
 
     /**
@@ -133,18 +168,6 @@ class ProductAdminController extends AdminController
     }
 
     /**
-     * Display the specified product
-     */
-    public function show(Product $product)
-    {
-        $product->load(['category', 'supplier', 'variants.inventories.warehouse', 'images']);
-
-        // Return appropriate view based on user role
-        $viewPrefix = auth()->user()->role->name === 'Manager' ? 'manager' : 'admin';
-        return view("{$viewPrefix}.products.show", compact('product'));
-    }
-
-    /**
      * Show the form for editing the specified product
      */
     public function edit(Product $product)
@@ -182,7 +205,7 @@ class ProductAdminController extends AdminController
                 'status' => $request->status,
             ]);
 
-            return $this->successRedirect('admin.products.show', 'Product updated successfully!');
+            return $this->successRedirect('admin.products.show', 'Product updated successfully!', ['product' => $product->id]);
         } catch (\Exception $e) {
             return $this->errorRedirect('Failed to update product: ' . $e->getMessage());
         }
@@ -194,6 +217,13 @@ class ProductAdminController extends AdminController
     public function destroy(Product $product)
     {
         try {
+            // Check if product has any purchase order details
+            $hasOrderDetails = $product->variants()->whereHas('orderDetails')->exists();
+
+            if ($hasOrderDetails) {
+                return $this->errorRedirect('Cannot delete product because it has been ordered. You can archive the product instead.');
+            }
+
             DB::beginTransaction();
 
             // Delete associated images from storage

@@ -288,4 +288,40 @@ class UserAdminController extends AdminController
 
         return response()->stream($callback, 200, $headers);
     }
+
+    /**
+     * Remove the specified user from storage.
+     */
+    public function destroy(User $user)
+    {
+        try {
+            // Check if user has any related orders
+            $orderCount = $user->orders()->count();
+
+            if ($orderCount > 0) {
+                return redirect()->back()->with('error', 'Cannot delete user because they have ' . $orderCount . ' order(s). Please handle these orders first.');
+            }
+
+            // Check if user has any addresses
+            $addressCount = $user->addresses()->count();
+
+            if ($addressCount > 0) {
+                return redirect()->back()->with('error', 'Cannot delete user because they have ' . $addressCount . ' address(es). Please handle these addresses first.');
+            }
+
+            // Check if user has any reviews
+            $reviewCount = $user->reviews()->count();
+
+            if ($reviewCount > 0) {
+                return redirect()->back()->with('error', 'Cannot delete user because they have ' . $reviewCount . ' review(s). Please handle these reviews first.');
+            }
+
+            // If no related records, proceed with deletion
+            $user->delete();
+
+            return redirect()->route('admin.users.index')->with('success', 'User deleted successfully!');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Failed to delete user: ' . $e->getMessage());
+        }
+    }
 }

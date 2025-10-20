@@ -4,6 +4,8 @@ namespace Database\Factories;
 
 use App\Models\InventoryTransaction;
 use App\Models\Inventory;
+use App\Models\ProductVariant;
+use App\Models\Warehouse;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -18,13 +20,15 @@ class InventoryTransactionFactory extends Factory
      */
     public function definition(): array
     {
-        $inventories = Inventory::all();
+        // Get a random product variant and warehouse
+        $productVariant = ProductVariant::inRandomOrder()->first() ?? ProductVariant::factory();
+        $warehouse = Warehouse::inRandomOrder()->first() ?? Warehouse::factory();
+
         return [
-            'inventory_id' => $inventories->isNotEmpty() ? $inventories->random()->id : Inventory::factory(),
-            'transaction_type' => $this->faker->randomElement(['inbound', 'outbound', 'adjustment']),
+            'product_variant_id' => is_object($productVariant) ? $productVariant->id : $productVariant,
+            'warehouse_id' => is_object($warehouse) ? $warehouse->id : $warehouse,
+            'type' => $this->faker->randomElement(['inbound', 'outbound']),
             'quantity' => $this->faker->numberBetween(-100, 100),
-            'reference_type' => $this->faker->randomElement(['order', 'purchase', 'adjustment']),
-            'reference_id' => $this->faker->numberBetween(1, 1000),
             'notes' => $this->faker->sentence,
         ];
     }

@@ -4,69 +4,81 @@ namespace App\Http\Controllers\Admin;
 
 use App\Models\Inventory;
 use App\Models\InventoryTransaction;
-use App\Models\Warehouse;
 use App\Models\ProductVariant;
+use App\Models\Warehouse;
+use App\Models\PurchaseOrder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 
 class InventoryAdminController extends AdminController
 {
     /**
-     * Display a listing of inventory
+     * Display a listing of inventories
      */
     public function index(Request $request)
     {
         $query = Inventory::with(['productVariant.product', 'warehouse']);
 
-        // Search by product name or SKU
+        // Filter by user's assigned warehouse if they are a warehouse-specific manager
+        $user = Auth::user();
+        if ($user && $user->role->name === 'Inventory Manager' && $user->warehouse_id) {
+            $query->where('warehouse_id', $user->warehouse_id);
+        }
+
+        // Search functionality
         if ($request->has('search')) {
             $search = $request->search;
-            $query->whereHas('productVariant', function($q) use ($search) {
-                $q->where('sku', 'like', "%{$search}%")
-                  ->orWhereHas('product', function($pq) use ($search) {
-                      $pq->where('name', 'like', "%{$search}%");
-                  });
+            $query->whereHas('productVariant.product', function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%");
+            })->orWhereHas('warehouse', function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%");
             });
         }
 
-        // Filter by warehouse
-        if ($request->has('warehouse_id')) {
+        // Filter by warehouse (only for admins)
+        if ($request->has('warehouse_id') && (!$user || $user->role->name === 'Admin')) {
             $query->where('warehouse_id', $request->warehouse_id);
         }
 
         // Filter by low stock
         if ($request->has('low_stock') && $request->low_stock) {
-            $query->where('quantity_on_hand', '<=', DB::raw('reorder_level'));
-        }
-
-        // Filter by out of stock
-        if ($request->has('out_of_stock') && $request->out_of_stock) {
-            $query->where('quantity_on_hand', '<=', 0);
+            $query->whereColumn('quantity_on_hand', '<=', 'reorder_level');
         }
 
         $inventories = $query->paginate(20);
         $warehouses = Warehouse::all();
 
         // Return appropriate view based on user role
-        $viewPrefix = auth()->user()->role->name === 'Manager' ? 'manager' : 'admin';
+        $viewPrefix = ($user && ($user->role->name === 'Manager' || $user->role->name === 'Inventory Manager')) ? 'manager' : 'admin';
         return view("{$viewPrefix}.inventory.index", compact('inventories', 'warehouses'));
     }
 
     /**
-     * Show inventory details
+     * Display the specified inventory
      */
     public function show(Inventory $inventory)
     {
+        // Check if user has access to this inventory
+        $user = Auth::user();
+        if ($user && $user->role->name === 'Inventory Manager' && $user->warehouse_id) {
+            if ($inventory->warehouse_id !== $user->warehouse_id) {
+                abort(403, 'Unauthorized access to this inventory.');
+            }
+        }
+
         $inventory->load(['productVariant.product', 'warehouse']);
 
-        // Get recent transactions
-        $transactions = InventoryTransaction::where('inventory_id', $inventory->id)
+        // Get recent transactions using product_variant_id and warehouse_id
+        $transactions = InventoryTransaction::where('product_variant_id', $inventory->product_variant_id)
+            ->where('warehouse_id', $inventory->warehouse_id)
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 
         // Return appropriate view based on user role
-        $viewPrefix = auth()->user()->role->name === 'Manager' ? 'manager' : 'admin';
+        $viewPrefix = ($user && ($user->role->name === 'Manager' || $user->role->name === 'Inventory Manager')) ? 'manager' : 'admin';
         return view("{$viewPrefix}.inventory.show", compact('inventory', 'transactions'));
     }
 
@@ -75,9 +87,17 @@ class InventoryAdminController extends AdminController
      */
     public function adjust(Request $request, Inventory $inventory)
     {
+        // Check if user has access to this inventory
+        $user = Auth::user();
+        if ($user && $user->role->name === 'Inventory Manager' && $user->warehouse_id) {
+            if ($inventory->warehouse_id !== $user->warehouse_id) {
+                return back()->with('error', 'Unauthorized access to this inventory.');
+            }
+        }
+
         $validator = Validator::make($request->all(), [
             'quantity' => 'required|integer',
-            'transaction_type' => 'required|in:inbound,outbound,adjustment',
+            'type' => 'required|in:inbound,outbound,adjustment',
             'reference_number' => 'nullable|string|max:255',
             'notes' => 'nullable|string|max:500',
         ]);
@@ -90,7 +110,7 @@ class InventoryAdminController extends AdminController
             DB::beginTransaction();
 
             $quantity = $request->quantity;
-            $transactionType = $request->transaction_type;
+            $transactionType = $request->type;
 
             // Calculate new quantity based on transaction type
             $newQuantity = $inventory->quantity_on_hand;
@@ -105,12 +125,12 @@ class InventoryAdminController extends AdminController
                 return back()->with('error', 'Insufficient inventory. Cannot reduce below zero.');
             }
 
-            // Create transaction record
+            // Create transaction record using product_variant_id and warehouse_id
             $transaction = InventoryTransaction::create([
-                'inventory_id' => $inventory->id,
-                'transaction_type' => $transactionType,
+                'product_variant_id' => $inventory->product_variant_id,
+                'warehouse_id' => $inventory->warehouse_id,
+                'type' => $transactionType,
                 'quantity' => $quantity,
-                'reference_number' => $request->reference_number,
                 'notes' => $request->notes,
             ]);
 
@@ -131,6 +151,13 @@ class InventoryAdminController extends AdminController
      */
     public function transfer(Request $request)
     {
+        $user = Auth::user();
+
+        // Only admins can transfer inventory between warehouses
+        if ($user && $user->role->name !== 'Admin') {
+            return back()->with('error', 'Only administrators can transfer inventory between warehouses.');
+        }
+
         $validator = Validator::make($request->all(), [
             'from_warehouse_id' => 'required|exists:warehouses,id',
             'to_warehouse_id' => 'required|exists:warehouses,id|different:from_warehouse_id',
@@ -156,6 +183,13 @@ class InventoryAdminController extends AdminController
                 return back()->with('error', 'Source inventory not found.');
             }
 
+            // Check if user has access to source inventory (for warehouse-specific managers)
+            if ($user && $user->role->name === 'Inventory Manager' && $user->warehouse_id) {
+                if ($sourceInventory->warehouse_id !== $user->warehouse_id) {
+                    return back()->with('error', 'Unauthorized access to source inventory.');
+                }
+            }
+
             if ($sourceInventory->quantity_on_hand < $request->quantity) {
                 return back()->with('error', 'Insufficient inventory in source warehouse.');
             }
@@ -173,21 +207,21 @@ class InventoryAdminController extends AdminController
                 ]
             );
 
-            // Create outbound transaction for source
+            // Create outbound transaction for source using product_variant_id and warehouse_id
             InventoryTransaction::create([
-                'inventory_id' => $sourceInventory->id,
-                'transaction_type' => 'outbound',
+                'product_variant_id' => $sourceInventory->product_variant_id,
+                'warehouse_id' => $sourceInventory->warehouse_id,
+                'type' => 'outbound',
                 'quantity' => -$request->quantity,
-                'reference_number' => $request->reference_number ?? 'TRANSFER-' . now()->timestamp,
                 'notes' => 'Transfer to Warehouse ID: ' . $request->to_warehouse_id . '. ' . ($request->notes ?? ''),
             ]);
 
-            // Create inbound transaction for destination
+            // Create inbound transaction for destination using product_variant_id and warehouse_id
             InventoryTransaction::create([
-                'inventory_id' => $destInventory->id,
-                'transaction_type' => 'inbound',
+                'product_variant_id' => $destInventory->product_variant_id,
+                'warehouse_id' => $destInventory->warehouse_id,
+                'type' => 'inbound',
                 'quantity' => $request->quantity,
-                'reference_number' => $request->reference_number ?? 'TRANSFER-' . now()->timestamp,
                 'notes' => 'Transfer from Warehouse ID: ' . $request->from_warehouse_id . '. ' . ($request->notes ?? ''),
             ]);
 
@@ -209,6 +243,14 @@ class InventoryAdminController extends AdminController
      */
     public function setReorderLevel(Request $request, Inventory $inventory)
     {
+        // Check if user has access to this inventory
+        $user = Auth::user();
+        if ($user && $user->role->name === 'Inventory Manager' && $user->warehouse_id) {
+            if ($inventory->warehouse_id !== $user->warehouse_id) {
+                return $this->errorResponse('Unauthorized access to this inventory.');
+            }
+        }
+
         $validator = Validator::make($request->all(), [
             'reorder_level' => 'required|integer|min:0',
         ]);
@@ -231,20 +273,23 @@ class InventoryAdminController extends AdminController
      */
     public function lowStock(Request $request)
     {
-        $warehouseId = $request->get('warehouse_id');
-
         $query = Inventory::with(['productVariant.product', 'warehouse'])
             ->whereColumn('quantity_on_hand', '<=', 'reorder_level');
 
-        if ($warehouseId) {
-            $query->where('warehouse_id', $warehouseId);
+        // Filter by user's assigned warehouse if they are a warehouse-specific manager
+        $user = Auth::user();
+        if ($user && $user->role->name === 'Inventory Manager' && $user->warehouse_id) {
+            $query->where('warehouse_id', $user->warehouse_id);
+        } else if ($request->has('warehouse_id')) {
+            // Filter by warehouse (only for admins or when no specific warehouse is assigned)
+            $query->where('warehouse_id', $request->warehouse_id);
         }
 
         $inventories = $query->orderBy('quantity_on_hand', 'asc')->paginate(20);
         $warehouses = Warehouse::all();
 
         // Return appropriate view based on user role
-        $viewPrefix = auth()->user()->role->name === 'Manager' ? 'manager' : 'admin';
+        $viewPrefix = ($user && ($user->role->name === 'Manager' || $user->role->name === 'Inventory Manager')) ? 'manager' : 'admin';
         return view("{$viewPrefix}.inventory.low-stock", compact('inventories', 'warehouses'));
     }
 
@@ -253,7 +298,15 @@ class InventoryAdminController extends AdminController
      */
     public function statistics(Request $request)
     {
-        $warehouseId = $request->get('warehouse_id');
+        // Filter by user's assigned warehouse if they are a warehouse-specific manager
+        $user = Auth::user();
+        $warehouseId = null;
+
+        if ($user && $user->role->name === 'Inventory Manager' && $user->warehouse_id) {
+            $warehouseId = $user->warehouse_id;
+        } else if ($request->has('warehouse_id')) {
+            $warehouseId = $request->warehouse_id;
+        }
 
         $query = Inventory::query();
 
@@ -263,23 +316,14 @@ class InventoryAdminController extends AdminController
 
         $stats = [
             'total_items' => $query->count(),
-            'total_quantity' => $query->sum('quantity_on_hand'),
-            'total_reserved' => $query->sum('quantity_reserved'),
-            'total_available' => $query->sum(DB::raw('quantity_on_hand - quantity_reserved')),
-            'low_stock_items' => Inventory::whereColumn('quantity_on_hand', '<=', 'reorder_level')
-                ->when($warehouseId, function($q) use ($warehouseId) {
-                    $q->where('warehouse_id', $warehouseId);
-                })
-                ->count(),
-            'out_of_stock_items' => Inventory::where('quantity_on_hand', '<=', 0)
-                ->when($warehouseId, function($q) use ($warehouseId) {
-                    $q->where('warehouse_id', $warehouseId);
-                })
-                ->count(),
-            'warehouses' => Warehouse::withCount('inventories')->get(),
+            'low_stock_items' => $query->clone()->whereColumn('quantity_on_hand', '<=', 'reorder_level')->count(),
+            'out_of_stock_items' => $query->clone()->where('quantity_on_hand', 0)->count(),
+            'total_value' => $query->clone()->sum(DB::raw('quantity_on_hand * reorder_level')),
         ];
 
-        return $this->successResponse('Statistics retrieved successfully', $stats);
+        // Return appropriate view based on user role
+        $viewPrefix = ($user && ($user->role->name === 'Manager' || $user->role->name === 'Inventory Manager')) ? 'manager' : 'admin';
+        return view("{$viewPrefix}.inventory.statistics", compact('stats'));
     }
 
     /**
@@ -287,46 +331,65 @@ class InventoryAdminController extends AdminController
      */
     public function transactions(Request $request)
     {
-        $query = InventoryTransaction::with(['inventory.productVariant.product', 'inventory.warehouse']);
+        $query = InventoryTransaction::with(['productVariant.product', 'warehouse', 'order']);
 
-        // Filter by warehouse
-        if ($request->has('warehouse_id')) {
-            $query->whereHas('inventory', function($q) use ($request) {
-                $q->where('warehouse_id', $request->warehouse_id);
+        // Filter by user's assigned warehouse if they are a warehouse-specific manager
+        $user = Auth::user();
+        if ($user && $user->role->name === 'Inventory Manager' && $user->warehouse_id) {
+            $query->where('warehouse_id', $user->warehouse_id);
+        } else if ($request->has('warehouse_id')) {
+            // Filter by warehouse (only for admins or when no specific warehouse is assigned)
+            $query->where('warehouse_id', $request->warehouse_id);
+        }
+
+        // Filter by product
+        if ($request->has('product_id')) {
+            $query->whereHas('productVariant', function($q) use ($request) {
+                $q->where('product_id', $request->product_id);
             });
         }
 
         // Filter by transaction type
-        if ($request->has('transaction_type')) {
-            $query->where('transaction_type', $request->transaction_type);
+        if ($request->has('type')) {
+            $query->where('type', $request->type);
         }
 
         // Filter by date range
-        if ($request->has('date_from')) {
-            $query->whereDate('created_at', '>=', $request->date_from);
+        if ($request->has('start_date')) {
+            $query->where('created_at', '>=', $request->start_date);
         }
 
-        if ($request->has('date_to')) {
-            $query->whereDate('created_at', '<=', $request->date_to);
+        if ($request->has('end_date')) {
+            $query->where('created_at', '<=', $request->end_date);
         }
 
-        $transactions = $query->orderBy('created_at', 'desc')->paginate(50);
+        $transactions = $query->orderBy('created_at', 'desc')->paginate(20);
         $warehouses = Warehouse::all();
+        $products = ProductVariant::with('product')->get()->pluck('product.name', 'product.id')->unique();
 
         // Return appropriate view based on user role
-        $viewPrefix = auth()->user()->role->name === 'Manager' ? 'manager' : 'admin';
-        return view("{$viewPrefix}.inventory.transactions", compact('transactions', 'warehouses'));
+        $viewPrefix = ($user && ($user->role->name === 'Manager' || $user->role->name === 'Inventory Manager')) ? 'manager' : 'admin';
+        return view("{$viewPrefix}.inventory.transactions", compact('transactions', 'warehouses', 'products'));
     }
 
     /**
-     * Export inventory to CSV
+     * Export inventory data to CSV
      */
     public function export(Request $request)
     {
         $query = Inventory::with(['productVariant.product', 'warehouse']);
 
-        if ($request->has('warehouse_id')) {
+        // Filter by user's assigned warehouse if they are a warehouse-specific manager
+        $user = Auth::user();
+        if ($user && $user->role->name === 'Inventory Manager' && $user->warehouse_id) {
+            $query->where('warehouse_id', $user->warehouse_id);
+        } else if ($request->has('warehouse_id')) {
+            // Filter by warehouse (only for admins or when no specific warehouse is assigned)
             $query->where('warehouse_id', $request->warehouse_id);
+        }
+
+        if ($request->has('low_stock') && $request->low_stock) {
+            $query->whereColumn('quantity_on_hand', '<=', 'reorder_level');
         }
 
         $inventories = $query->get();
@@ -339,24 +402,18 @@ class InventoryAdminController extends AdminController
         $callback = function() use ($inventories) {
             $file = fopen('php://output', 'w');
 
-            // CSV headers
-            fputcsv($file, ['SKU', 'Product', 'Warehouse', 'On Hand', 'Reserved', 'Available', 'Reorder Level', 'Status']);
+            // Add CSV headers
+            fputcsv($file, ['Product', 'Variant', 'Warehouse', 'Quantity On Hand', 'Quantity Reserved', 'Reorder Level']);
 
-            // CSV data
+            // Add data
             foreach ($inventories as $inventory) {
-                $available = $inventory->quantity_on_hand - $inventory->quantity_reserved;
-                $status = $inventory->quantity_on_hand <= 0 ? 'Out of Stock' :
-                         ($inventory->quantity_on_hand <= $inventory->reorder_level ? 'Low Stock' : 'In Stock');
-
                 fputcsv($file, [
-                    $inventory->productVariant->sku,
-                    $inventory->productVariant->product->name . ' - ' . $inventory->productVariant->variant_name,
+                    $inventory->productVariant->product->name,
+                    $inventory->productVariant->name,
                     $inventory->warehouse->name,
                     $inventory->quantity_on_hand,
                     $inventory->quantity_reserved,
-                    $available,
                     $inventory->reorder_level,
-                    $status,
                 ]);
             }
 
@@ -364,61 +421,5 @@ class InventoryAdminController extends AdminController
         };
 
         return response()->stream($callback, 200, $headers);
-    }
-
-    /**
-     * Create inventory for product variant
-     */
-    public function store(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'warehouse_id' => 'required|exists:warehouses,id',
-            'product_variant_id' => 'required|exists:product_variants,id',
-            'quantity_on_hand' => 'required|integer|min:0',
-            'reorder_level' => 'required|integer|min:0',
-        ]);
-
-        if ($validator->fails()) {
-            return $this->errorResponse($validator->errors()->first(), $validator->errors()->toArray());
-        }
-
-        // Check if inventory already exists
-        $existing = Inventory::where('warehouse_id', $request->warehouse_id)
-            ->where('product_variant_id', $request->product_variant_id)
-            ->first();
-
-        if ($existing) {
-            return $this->errorResponse('Inventory already exists for this product variant in this warehouse.');
-        }
-
-        try {
-            DB::beginTransaction();
-
-            $inventory = Inventory::create([
-                'warehouse_id' => $request->warehouse_id,
-                'product_variant_id' => $request->product_variant_id,
-                'quantity_on_hand' => $request->quantity_on_hand,
-                'quantity_reserved' => 0,
-                'reorder_level' => $request->reorder_level,
-            ]);
-
-            // Create initial inbound transaction if quantity > 0
-            if ($request->quantity_on_hand > 0) {
-                InventoryTransaction::create([
-                    'inventory_id' => $inventory->id,
-                    'transaction_type' => 'inbound',
-                    'quantity' => $request->quantity_on_hand,
-                    'reference_number' => 'INITIAL-' . now()->timestamp,
-                    'notes' => 'Initial inventory creation',
-                ]);
-            }
-
-            DB::commit();
-
-            return $this->successResponse('Inventory created successfully!', ['inventory' => $inventory]);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return $this->errorResponse('Failed to create inventory: ' . $e->getMessage());
-        }
     }
 }

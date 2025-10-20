@@ -95,8 +95,8 @@
                                         <tr>
                                             <td>{{ $transaction->created_at->format('M d, Y H:i') }}</td>
                                             <td>
-                                                <span class="badge bg-{{ $transaction->transaction_type === 'inbound' ? 'success' : ($transaction->transaction_type === 'outbound' ? 'danger' : 'info') }}">
-                                                    {{ ucfirst($transaction->transaction_type) }}
+                                                <span class="badge bg-{{ $transaction->type === 'inbound' ? 'success' : ($transaction->type === 'outbound' ? 'danger' : 'info') }}">
+                                                    {{ ucfirst($transaction->type) }}
                                                 </span>
                                             </td>
                                             <td>{{ number_format($transaction->quantity) }}</td>
@@ -133,11 +133,10 @@
             </div>
             <form action="{{ route('admin.inventory.adjust', $inventory) }}" method="POST">
                 @csrf
-                @method('PUT')
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label for="transaction_type" class="form-label">Transaction Type</label>
-                        <select class="form-select" id="transaction_type" name="transaction_type" required>
+                        <label for="type" class="form-label">Transaction Type</label>
+                        <select class="form-select" id="type" name="type" required>
                             <option value="inbound">Inbound (Add to inventory)</option>
                             <option value="outbound">Outbound (Remove from inventory)</option>
                             <option value="adjustment">Adjustment (Set exact quantity)</option>

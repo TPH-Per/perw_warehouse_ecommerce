@@ -4,11 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class InventoryTransaction extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
     /**
      * The attributes that are mass assignable.
      *
@@ -18,10 +19,18 @@ class InventoryTransaction extends Model
         'product_variant_id',
         'warehouse_id',
         'order_id',
-        'transaction_type',
-        'quantity_change',
-        'quantity_after',
+        'type',
+        'quantity',
         'notes',
+    ];
+
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array
+     */
+    protected $casts = [
+        'deleted_at' => 'datetime',
     ];
 
     /**
