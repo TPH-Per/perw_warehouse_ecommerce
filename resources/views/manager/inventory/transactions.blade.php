@@ -1,10 +1,10 @@
 @extends('layouts.manager')
 
-@section('title', 'Giao dịch Kho hàng')
+@section('title', 'Lịch sử Xuất Nhập Kho')
 
 @section('content')
 <div class="page-header">
-    <h1><i class="bi bi-clock-history"></i> Giao dịch Kho hàng</h1>
+    <h1><i class="bi bi-arrow-repeat"></i> Lịch sử Xuất Nhập Kho</h1>
     <p class="text-muted mb-0">Lịch sử đầy đủ về các giao dịch tồn kho</p>
 </div>
 

@@ -57,6 +57,141 @@ class InventoryAdminController extends AdminController
     }
 
     /**
+     * Show the form for editing the specified inventory.
+     */
+    public function edit(Inventory $inventory)
+    {
+        $user = Auth::user();
+
+        // Only inventory managers and admins can edit inventory records
+        if ($user && $user->role->name !== 'Inventory Manager' && $user->role->name !== 'Admin') {
+            return back()->with('error', 'Unauthorized access.');
+        }
+
+        // Check if user has access to this inventory
+        if ($user && $user->role->name === 'Inventory Manager' && $user->warehouse_id) {
+            if ($inventory->warehouse_id !== $user->warehouse_id) {
+                return back()->with('error', 'Unauthorized access to this inventory.');
+            }
+        }
+
+        $inventory->load(['productVariant.product', 'warehouse']);
+        $warehouses = Warehouse::all();
+
+        // Return appropriate view based on user role
+        $viewPrefix = ($user && ($user->role->name === 'Manager' || $user->role->name === 'Inventory Manager')) ? 'manager' : 'admin';
+        return view("{$viewPrefix}.inventory.edit", compact('inventory', 'warehouses'));
+    }
+
+    /**
+     * Update the specified inventory in storage.
+     */
+    public function update(Request $request, Inventory $inventory)
+    {
+        $user = Auth::user();
+
+        // Only inventory managers and admins can update inventory records
+        if ($user && $user->role->name !== 'Inventory Manager' && $user->role->name !== 'Admin') {
+            return back()->with('error', 'Unauthorized access.');
+        }
+
+        // Check if user has access to this inventory
+        if ($user && $user->role->name === 'Inventory Manager' && $user->warehouse_id) {
+            if ($inventory->warehouse_id !== $user->warehouse_id) {
+                return back()->with('error', 'Unauthorized access to this inventory.');
+            }
+        }
+
+        $validator = Validator::make($request->all(), [
+            'quantity_on_hand' => 'required|integer|min:0',
+            'quantity_reserved' => 'required|integer|min:0',
+            'reorder_level' => 'required|integer|min:0',
+        ]);
+
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput();
+        }
+
+        try {
+            // Update inventory record
+            $inventory->update([
+                'quantity_on_hand' => $request->quantity_on_hand,
+                'quantity_reserved' => $request->quantity_reserved,
+                'reorder_level' => $request->reorder_level,
+            ]);
+
+            return redirect()->route('manager.inventory.show', $inventory->id)->with('success', 'Inventory record updated successfully!');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to update inventory record: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Store a newly created inventory record
+     */
+    public function store(Request $request)
+    {
+        $user = Auth::user();
+
+        // Only inventory managers and admins can create inventory records
+        if ($user && $user->role->name !== 'Inventory Manager' && $user->role->name !== 'Admin') {
+            return back()->with('error', 'Unauthorized access.');
+        }
+
+        $validator = Validator::make($request->all(), [
+            'product_variant_id' => 'required|exists:product_variants,id',
+            'warehouse_id' => 'required|exists:warehouses,id',
+            'quantity_on_hand' => 'required|integer|min:0',
+            'quantity_reserved' => 'required|integer|min:0',
+            'reorder_level' => 'required|integer|min:0',
+        ]);
+
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput();
+        }
+
+        // Check if user has access to this warehouse
+        if ($user && $user->role->name === 'Inventory Manager' && $user->warehouse_id) {
+            if ($request->warehouse_id !== $user->warehouse_id) {
+                return back()->with('error', 'Unauthorized access to this warehouse.');
+            }
+        }
+
+        try {
+            // Check if inventory record already exists
+            $existingInventory = Inventory::where('product_variant_id', $request->product_variant_id)
+                ->where('warehouse_id', $request->warehouse_id)
+                ->first();
+
+            if ($existingInventory) {
+                return back()->with('error', 'Inventory record already exists for this product variant in this warehouse. Please adjust the existing record instead.');
+            }
+
+            // Create new inventory record
+            $inventory = Inventory::create([
+                'product_variant_id' => $request->product_variant_id,
+                'warehouse_id' => $request->warehouse_id,
+                'quantity_on_hand' => $request->quantity_on_hand,
+                'quantity_reserved' => $request->quantity_reserved,
+                'reorder_level' => $request->reorder_level,
+            ]);
+
+            // Create initial transaction record
+            InventoryTransaction::create([
+                'product_variant_id' => $inventory->product_variant_id,
+                'warehouse_id' => $inventory->warehouse_id,
+                'type' => 'inbound',
+                'quantity' => $inventory->quantity_on_hand,
+                'notes' => 'Initial inventory creation',
+            ]);
+
+            return back()->with('success', 'Inventory record created successfully!');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to create inventory record: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Display the specified inventory
      */
     public function show(Inventory $inventory)
@@ -421,5 +556,43 @@ class InventoryAdminController extends AdminController
         };
 
         return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * Remove the specified inventory record from storage.
+     */
+    public function destroy(Inventory $inventory)
+    {
+        $user = Auth::user();
+
+        // Only inventory managers and admins can delete inventory records
+        if ($user && $user->role->name !== 'Inventory Manager' && $user->role->name !== 'Admin') {
+            return back()->with('error', 'Unauthorized access.');
+        }
+
+        // Check if user has access to this inventory
+        if ($user && $user->role->name === 'Inventory Manager' && $user->warehouse_id) {
+            if ($inventory->warehouse_id !== $user->warehouse_id) {
+                return back()->with('error', 'Unauthorized access to this inventory.');
+            }
+        }
+
+        try {
+            // Check if there are any transactions for this inventory
+            $transactionCount = InventoryTransaction::where('product_variant_id', $inventory->product_variant_id)
+                ->where('warehouse_id', $inventory->warehouse_id)
+                ->count();
+
+            if ($transactionCount > 0) {
+                return back()->with('error', 'Cannot delete inventory record with existing transactions. You can set quantity to zero instead.');
+            }
+
+            // Delete the inventory record
+            $inventory->delete();
+
+            return back()->with('success', 'Inventory record deleted successfully!');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to delete inventory record: ' . $e->getMessage());
+        }
     }
 }

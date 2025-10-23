@@ -238,6 +238,12 @@
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('manager.inventory.transactions') ? 'active' : '' }}"
+                               href="{{ route('manager.inventory.transactions') }}">
+                                <i class="bi bi-arrow-repeat"></i> Xuất Nhập Kho
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('manager.products.*') ? 'active' : '' }}"
                                href="{{ route('manager.products.index') }}">
                                 <i class="bi bi-box-seam"></i> Sản phẩm (Chỉ xem)

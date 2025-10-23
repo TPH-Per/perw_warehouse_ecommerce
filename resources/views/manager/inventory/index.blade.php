@@ -8,6 +8,16 @@
     <p class="text-muted mb-0">Quản lý mức tồn kho và chuyển kho</p>
 </div>
 
+<!-- Action Buttons -->
+<div class="mb-3">
+    <a href="{{ route('manager.inventory.transactions') }}" class="btn btn-success">
+        <i class="bi bi-arrow-repeat"></i> Lịch sử Xuất Nhập Kho
+    </a>
+    <a href="#" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createInventoryModal">
+        <i class="bi bi-plus-circle"></i> Thêm Hàng Tồn Kho
+    </a>
+</div>
+
 <!-- Filters -->
 <div class="card mb-4">
     <div class="card-body">
@@ -115,10 +125,16 @@
                             @endif
                         </td>
                         <td>
-                            <a href="{{ route('manager.inventory.show', $inventory->id) }}"
-                               class="btn btn-sm btn-info">
-                                <i class="bi bi-eye"></i> Xem
-                            </a>
+                            <div class="btn-group" role="group">
+                                <a href="{{ route('manager.inventory.show', $inventory->id) }}"
+                                   class="btn btn-sm btn-info" title="Xem chi tiết">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{{ route('manager.inventory.edit', $inventory->id) }}"
+                                   class="btn btn-sm btn-primary" title="Chỉnh sửa">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                            </div>
                         </td>
                     </tr>
                     @endforeach
@@ -136,6 +152,74 @@
             <p class="text-muted mt-3">Không tìm thấy kho hàng</p>
         </div>
         @endif
+    </div>
+</div>
+
+<!-- Create Inventory Modal -->
+<div class="modal fade" id="createInventoryModal" tabindex="-1" aria-labelledby="createInventoryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="POST" action="{{ route('manager.inventory.store') }}">
+                @csrf
+                <div class="modal-header">
+                    <h5 class="modal-title" id="createInventoryModalLabel">Thêm Hàng Tồn Kho Mới</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="product_variant_id" class="form-label">Sản phẩm *</label>
+                            <select class="form-select" id="product_variant_id" name="product_variant_id" required>
+                                <option value="">Chọn sản phẩm...</option>
+                                @foreach(\App\Models\ProductVariant::with('product')->get() as $variant)
+                                    <option value="{{ $variant->id }}">
+                                        {{ $variant->product->name }} - {{ $variant->name }} ({{ $variant->sku }})
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        
+                        @php
+                            $user = auth()->user();
+                            $isWarehouseSpecificManager = $user && $user->role->name === 'Inventory Manager' && $user->warehouse_id;
+                        @endphp
+                        
+                        @if($isWarehouseSpecificManager)
+                            <input type="hidden" name="warehouse_id" value="{{ $user->warehouse_id }}">
+                        @else
+                            <div class="col-md-6 mb-3">
+                                <label for="warehouse_id" class="form-label">Kho hàng *</label>
+                                <select class="form-select" id="warehouse_id" name="warehouse_id" required>
+                                    <option value="">Chọn kho hàng...</option>
+                                    @foreach($warehouses as $warehouse)
+                                        <option value="{{ $warehouse->id }}">{{ $warehouse->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        @endif
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="quantity_on_hand" class="form-label">Số lượng hiện có *</label>
+                            <input type="number" class="form-control" id="quantity_on_hand" name="quantity_on_hand" min="0" required>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="quantity_reserved" class="form-label">Số lượng đã đặt *</label>
+                            <input type="number" class="form-control" id="quantity_reserved" name="quantity_reserved" min="0" required value="0">
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="reorder_level" class="form-label">Mức đặt hàng lại *</label>
+                            <input type="number" class="form-control" id="reorder_level" name="reorder_level" min="0" required value="10">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                    <button type="submit" class="btn btn-primary">Tạo bản ghi tồn kho</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 @endsection

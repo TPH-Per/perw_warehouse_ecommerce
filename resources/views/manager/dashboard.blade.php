@@ -70,6 +70,9 @@
                     <a href="{{ route('manager.inventory.index') }}" class="btn btn-secondary btn-lg">
                         <i class="bi bi-boxes"></i> Quản lý kho hàng
                     </a>
+                    <a href="{{ route('manager.inventory.transactions') }}" class="btn btn-success btn-lg">
+                        <i class="bi bi-arrow-repeat"></i> Xuất Nhập Kho
+                    </a>
                     <a href="{{ route('manager.inventory.low-stock') }}" class="btn btn-warning btn-lg">
                         <i class="bi bi-exclamation-triangle"></i> Xem hàng sắp hết
                     </a>
@@ -77,96 +80,6 @@
                         <i class="bi bi-search"></i> Duyệt sản phẩm
                     </a>
                 </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Main Content Row -->
-<div class="row mt-4">
-    <!-- Low Stock Alerts -->
-    <div class="col-lg-6">
-        <div class="card border-warning">
-            <div class="card-header bg-warning text-white">
-                <i class="bi bi-exclamation-triangle-fill"></i> Cảnh báo hàng sắp hết
-            </div>
-            <div class="card-body">
-                @if($lowStockItems->count() > 0)
-                <div class="table-responsive">
-                    <table class="table table-sm table-striped">
-                        <thead>
-                            <tr>
-                                <th>Sản phẩm</th>
-                                <th>Kho</th>
-                                <th>Số lượng</th>
-                                <th>Đặt hàng lại</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($lowStockItems as $item)
-                            <tr>
-                                <td>
-                                    <strong>{{ $item->productVariant->product->name }}</strong>
-                                    <br>
-                                    <small>{{ $item->productVariant->sku }}</small>
-                                </td>
-                                <td>{{ $item->warehouse->name }}</td>
-                                <td><span class="badge bg-danger">{{ $item->quantity_on_hand }}</span></td>
-                                <td>{{ $item->reorder_level }}</td>
-                            </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-                <a href="{{ route('manager.inventory.low-stock') }}" class="btn btn-sm btn-warning mt-2">
-                    Xem tất cả hàng sắp hết
-                </a>
-                @else
-                <p class="text-muted text-center py-3">Không có sản phẩm nào sắp hết hàng</p>
-                @endif
-            </div>
-        </div>
-    </div>
-
-    <!-- Today's Direct Sales -->
-    <div class="col-lg-6">
-        <div class="card">
-            <div class="card-header bg-success text-white">
-                <i class="bi bi-cart-check"></i> Bán hàng trực tiếp hôm nay
-            </div>
-            <div class="card-body">
-                @if($recentSales->count() > 0)
-                <div class="table-responsive">
-                    <table class="table table-sm table-striped">
-                        <thead>
-                            <tr>
-                                <th>Đơn hàng #</th>
-                                <th>Khách hàng</th>
-                                <th>Số tiền</th>
-                                <th>Thời gian</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($recentSales as $sale)
-                            <tr>
-                                <td><strong>#{{ $sale->id }}</strong></td>
-                                <td>{{ $sale->user->full_name ?? 'Khách lẻ' }}</td>
-                                <td><strong>${{ number_format($sale->payment->amount ?? 0, 2) }}</strong></td>
-                                <td>{{ $sale->created_at->format('H:i') }}</td>
-                            </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-                <a href="{{ route('manager.sales.index') }}" class="btn btn-sm btn-success mt-2">
-                    Xem tất cả đơn hàng
-                </a>
-                @else
-                <p class="text-muted text-center py-3">Không có đơn hàng nào hôm nay</p>
-                <a href="{{ route('manager.sales.create') }}" class="btn btn-primary">
-                    <i class="bi bi-plus-circle"></i> Tạo đơn hàng đầu tiên
-                </a>
-                @endif
             </div>
         </div>
     </div>
@@ -182,6 +95,7 @@
                     <li>✓ Quản lý số lượng kho hàng</li>
                     <li>✓ Tạo đơn bán hàng trực tiếp (khách hàng tại chỗ)</li>
                     <li>✓ Xem sản phẩm và giá cả</li>
+                    <li>✓ Xuất nhập kho hàng</li>
                     <li>✓ Chuyển kho giữa các kho hàng</li>
                     <li>✗ Không thể thêm/xóa sản phẩm</li>
                     <li>✗ Không thể quản lý đơn hàng vận chuyển</li>
@@ -198,7 +112,7 @@
                     <li>Cập nhật số lượng kho ngay sau khi giao dịch</li>
                     <li>Báo cáo các mặt hàng sắp hết cho quản trị viên hệ thống</li>
                     <li>Đơn bán hàng trực tiếp chỉ dành cho khách hàng tại chỗ</li>
-                    <li>Sử dụng tính năng điều chỉnh kho cho các điều chỉnh hàng tồn kho</li>
+                    <li>Sử dụng tính năng "Xuất Nhập Kho" để xem lịch sử giao dịch</li>
                 </ul>
             </div>
         </div>

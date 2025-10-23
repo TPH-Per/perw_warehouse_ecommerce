@@ -83,8 +83,12 @@ Route::middleware(['auth', 'manager'])->prefix('manager')->name('manager.')->gro
         Route::get('/low-stock', [InventoryAdminController::class, 'lowStock'])->name('low-stock');
         Route::get('/transactions', [InventoryAdminController::class, 'transactions'])->name('transactions');
         Route::get('/{inventory}', [InventoryAdminController::class, 'show'])->name('show');
+        Route::get('/{inventory}/edit', [InventoryAdminController::class, 'edit'])->name('edit');
         Route::post('/{inventory}/adjust', [InventoryAdminController::class, 'adjust'])->name('adjust');
         Route::post('/transfer', [InventoryAdminController::class, 'transfer'])->name('transfer');
+        Route::post('/', [InventoryAdminController::class, 'store'])->name('store');
+        Route::put('/{inventory}', [InventoryAdminController::class, 'update'])->name('update');
+        Route::delete('/{inventory}', [InventoryAdminController::class, 'destroy'])->name('destroy');
     });
 
     // Direct Sales (No shipping)
