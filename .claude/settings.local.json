@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(php artisan view:clear:*)",
+      "Bash(php artisan:*)",
+      "Bash(php artisan config:clear:*)",
+      "Bash(curl -I \"http://127.0.0.1:8000/manager/inventory\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

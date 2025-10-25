@@ -6,18 +6,129 @@ use App\Models\Inventory;
 use App\Models\InventoryTransaction;
 use App\Models\ProductVariant;
 use App\Models\Warehouse;
-use App\Models\PurchaseOrder;
+use App\Services\InventoryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class InventoryAdminController extends AdminController
 {
+    public function __construct(private InventoryService $inventoryService)
+    {
+    }
+
     /**
-     * Display a listing of inventories
+     * Record an inbound receipt for one or many items.
      */
+    public function inbound(Request $request)
+    {
+        $request->validate([
+            'warehouse_id' => 'required|exists:warehouses,id',
+            'items' => 'required|array|min:1',
+            'items.*.product_variant_id' => 'nullable|exists:product_variants,id',
+            'items.*.sku' => 'nullable|string',
+            'items.*.quantity' => 'required|integer|min:1',
+            'items.*.notes' => 'nullable|string|max:500',
+        ], [
+            'items.required' => 'Phiếu nhập phải có ít nhất 1 sản phẩm.',
+        ]);
+
+        $user = Auth::user();
+        if ($user && $user->role->name === 'Inventory Manager' && (int) $user->warehouse_id !== (int) $request->warehouse_id) {
+            return back()->with('error', 'Bạn không có quyền nhập kho khác.');
+        }
+
+        $items = collect($request->input('items'))
+            ->map(function (array $item) {
+                $variantId = $item['product_variant_id'] ?? null;
+                $sku = $item['sku'] ?? null;
+
+                if (!$variantId && !$sku) {
+                    throw ValidationException::withMessages([
+                        'items' => 'Mỗi dòng phải chọn sản phẩm hoặc nhập SKU.',
+                    ]);
+                }
+
+                return [
+                    'variant_id' => $variantId,
+                    'sku' => $sku,
+                    'quantity' => (int) $item['quantity'],
+                    'notes' => $item['notes'] ?? null,
+                ];
+            })
+            ->all();
+
+        $rawResults = $this->inventoryService->inboundBatch(
+            (int) $request->warehouse_id,
+            $items,
+            $request->input('notes')
+        );
+
+        $variantMap = ProductVariant::query()
+            ->with('product')
+            ->whereIn('id', collect($rawResults)->pluck('transaction.product_variant_id')->unique())
+            ->get()
+            ->keyBy('id');
+
+        $results = collect($rawResults)->map(function (array $result) use ($variantMap) {
+            $variantId = $result['transaction']['product_variant_id'];
+            $variant = $variantMap->get($variantId);
+
+            $result['variant'] = $variant ? [
+                'id' => $variant->id,
+                'sku' => $variant->sku,
+                'name' => $variant->name,
+                'product_name' => $variant->product->name ?? '',
+                'full_label' => trim(($variant->product->name ?? '') . ($variant->name ? " ({$variant->name})" : '')),
+            ] : null;
+
+            return $result;
+        })->toArray();
+
+        return back()
+            ->with('success', 'Đã ghi nhận phiếu nhập.')
+            ->with('inbound_result', $results);
+    }
+
+    /**
+     * Search product variants for the inbound autocomplete.
+     */
+    public function searchVariants(Request $request)
+    {
+        $term = trim((string) $request->input('q', ''));
+
+        $variants = ProductVariant::query()
+            ->with('product')
+            ->when($term !== '', function ($query) use ($term) {
+                $query->where(function ($search) use ($term) {
+                    $search->where('name', 'like', "%{$term}%")
+                        ->orWhere('sku', 'like', "%{$term}%")
+                        ->orWhereHas('product', function ($subQuery) use ($term) {
+                            $subQuery->where('name', 'like', "%{$term}%");
+                        });
+                });
+            })
+            ->limit(20)
+            ->get()
+            ->map(function (ProductVariant $variant) {
+                $productName = $variant->product->name ?? '';
+                $variantName = $variant->name ? " ({$variant->name})" : '';
+
+                return [
+                    'id' => $variant->id,
+                    'sku' => $variant->sku,
+                    'label' => trim("{$productName}{$variantName}") ?: $variant->sku,
+                    'product_name' => $productName,
+                    'variant_name' => $variant->name,
+                    'price' => $variant->price,
+                ];
+            });
+
+        return response()->json($variants);
+    }
+
     public function index(Request $request)
     {
         $query = Inventory::with(['productVariant.product', 'warehouse']);
@@ -241,15 +352,35 @@ class InventoryAdminController extends AdminController
             return back()->withErrors($validator)->withInput();
         }
 
+        $quantity = (int) $request->quantity;
+        $transactionType = $request->type;
+        $note = $request->input('notes');
+        if ($request->filled('reference_number')) {
+            $referenceSuffix = 'Ref: ' . $request->reference_number;
+            $note = $note ? "{$note} ({$referenceSuffix})" : $referenceSuffix;
+        }
+
+        if ($transactionType === 'inbound') {
+            try {
+                $this->inventoryService->inbound(
+                    $inventory->warehouse_id,
+                    $inventory->product_variant_id,
+                    abs($quantity),
+                    $note
+                );
+
+                return back()->with('success', 'Inventory adjusted successfully!');
+            } catch (\Throwable $e) {
+                return back()->with('error', 'Failed to adjust inventory: ' . $e->getMessage())->withInput();
+            }
+        }
+
         try {
             DB::beginTransaction();
 
-            $quantity = $request->quantity;
-            $transactionType = $request->type;
-
             // Calculate new quantity based on transaction type
             $newQuantity = $inventory->quantity_on_hand;
-            if ($transactionType === 'inbound' || ($transactionType === 'adjustment' && $quantity > 0)) {
+            if ($transactionType === 'adjustment' && $quantity > 0) {
                 $newQuantity += abs($quantity);
             } elseif ($transactionType === 'outbound' || ($transactionType === 'adjustment' && $quantity < 0)) {
                 $newQuantity -= abs($quantity);
@@ -261,12 +392,17 @@ class InventoryAdminController extends AdminController
             }
 
             // Create transaction record using product_variant_id and warehouse_id
+            $transactionQuantity = abs($quantity);
+            if ($transactionType === 'outbound' || ($transactionType === 'adjustment' && $quantity < 0)) {
+                $transactionQuantity = -abs($quantity);
+            }
+
             $transaction = InventoryTransaction::create([
                 'product_variant_id' => $inventory->product_variant_id,
                 'warehouse_id' => $inventory->warehouse_id,
                 'type' => $transactionType,
-                'quantity' => $quantity,
-                'notes' => $request->notes,
+                'quantity' => $transactionQuantity,
+                'notes' => $note,
             ]);
 
             // Update inventory

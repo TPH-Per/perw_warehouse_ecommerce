@@ -75,11 +75,13 @@ Route::get('/test-user-filter', function () {
 // Inventory Manager Routes (Protected by authentication and manager role)
 Route::middleware(['auth', 'manager'])->prefix('manager')->name('manager.')->group(function () {
     // Dashboard
-    Route::get('/dashboard', [App\Http\Controllers\Manager\ManagerDashboardController::class, 'index'])->name('dashboard');
+        Route::get('/dashboard', [App\Http\Controllers\Manager\ManagerDashboardController::class, 'index'])->name('dashboard');
 
     // Inventory Management (Read/Update only, NO create/delete products)
     Route::prefix('inventory')->name('inventory.')->group(function () {
         Route::get('/', [InventoryAdminController::class, 'index'])->name('index');
+        Route::get('/variants/search', [InventoryAdminController::class, 'searchVariants'])->name('variants.search');
+        Route::post('/inbound', [InventoryAdminController::class, 'inbound'])->name('inbound');
         Route::get('/low-stock', [InventoryAdminController::class, 'lowStock'])->name('low-stock');
         Route::get('/transactions', [InventoryAdminController::class, 'transactions'])->name('transactions');
         Route::get('/{inventory}', [InventoryAdminController::class, 'show'])->name('show');
@@ -152,6 +154,9 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         Route::get('/statistics', [InventoryAdminController::class, 'statistics'])->name('statistics');
         Route::get('/transactions', [InventoryAdminController::class, 'transactions'])->name('transactions');
         Route::get('/export', [InventoryAdminController::class, 'export'])->name('export');
+
+        Route::get('/variants/search', [InventoryAdminController::class, 'searchVariants'])->name('variants.search');
+        Route::post('/inbound', [InventoryAdminController::class, 'inbound'])->name('inbound');
 
         Route::post('/', [InventoryAdminController::class, 'store'])->name('store');
         Route::get('/{inventory}', [InventoryAdminController::class, 'show'])->name('show');

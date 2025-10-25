@@ -10,6 +10,26 @@
     </div>
 </div>
 
+@if(session('inbound_result'))
+    @php($inboundResults = session('inbound_result'))
+    <div class="alert alert-info">
+        <h5 class="mb-2"><i class="bi bi-check-circle"></i> Inbound receipt recorded</h5>
+        <ul class="mb-0">
+            @foreach($inboundResults as $row)
+                <li>
+                    <strong>{{ $row['variant']['full_label'] ?? ('SKU #' . ($row['variant']['sku'] ?? $row['transaction']['product_variant_id'])) }}</strong>
+                    — Received {{ abs($row['transaction']['quantity']) }} units.
+                    <span class="text-muted">
+                        (On-hand: {{ $row['inventory']['quantity_on_hand'] }},
+                        Reserved: {{ $row['inventory']['quantity_reserved'] }},
+                        Available: {{ $row['inventory']['available_quantity'] }})
+                    </span>
+                </li>
+            @endforeach
+        </ul>
+    </div>
+@endif
+
 <!-- Inventory Statistics -->
 <div class="row mb-4">
     <div class="col-md-3">
@@ -100,6 +120,9 @@
     <div class="card-header d-flex justify-content-between align-items-center">
         <span><i class="bi bi-list"></i> Inventory Items ({{ $inventories->total() }} total)</span>
         <div class="btn-group">
+            <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#inboundModal">
+                <i class="bi bi-box-arrow-in-down"></i> New Inbound
+            </button>
             <a href="{{ route('admin.inventory.transactions') }}" class="btn btn-sm btn-info">
                 <i class="bi bi-clock-history"></i> Transactions
             </a>
@@ -222,4 +245,327 @@
         @endif
     </div>
 </div>
+
+<!-- Inbound Modal -->
+<div class="modal fade" id="inboundModal" tabindex="-1" aria-labelledby="inboundModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <form method="POST" action="{{ route('admin.inventory.inbound') }}" id="inbound-form">
+                @csrf
+                <div class="modal-header">
+                    <h5 class="modal-title" id="inboundModalLabel">
+                        <i class="bi bi-box-arrow-in-down"></i> Record Inbound Receipt
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="inbound-warehouse" class="form-label">Destination Warehouse *</label>
+                            <select class="form-select" name="warehouse_id" id="inbound-warehouse" required>
+                                <option value="">Select warehouse...</option>
+                                @foreach($warehouses as $warehouse)
+                                    <option value="{{ $warehouse->id }}">{{ $warehouse->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Search products *</label>
+                            <div class="position-relative">
+                                <input type="text" class="form-control" id="inbound-search" placeholder="Type product name or SKU...">
+                                <div class="list-group position-absolute w-100 shadow-sm d-none" id="inbound-search-results" style="z-index: 1056;"></div>
+                            </div>
+                            <small class="text-muted">Enter at least 2 characters, then pick products to add to this receipt.</small>
+                        </div>
+                        <div class="col-12">
+                            <div class="table-responsive">
+                                <table class="table align-middle" id="inbound-items-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Product</th>
+                                            <th>SKU</th>
+                                            <th width="15%">Quantity</th>
+                                            <th width="30%">Line notes (optional)</th>
+                                            <th class="text-end" width="5%">#</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr id="inbound-empty-row" class="text-muted text-center">
+                                            <td colspan="5">No items yet. Use the search box to add products.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Receipt notes (optional)</label>
+                            <textarea class="form-control" name="notes" rows="2" placeholder="PO number, supplier, transfer reference..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer justify-content-between">
+                    <span class="text-muted small">
+                        Each line will be recorded as an inbound inventory transaction.
+                    </span>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save"></i> Save Receipt
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const inboundModal = document.getElementById('inboundModal');
+    if (!inboundModal) {
+        return;
+    }
+
+    const inboundForm = document.getElementById('inbound-form');
+    const searchInput = document.getElementById('inbound-search');
+    const resultsBox = document.getElementById('inbound-search-results');
+    const itemsTableBody = document.querySelector('#inbound-items-table tbody');
+    const searchEndpoint = @json(route('admin.inventory.variants.search'));
+    let debounceTimer;
+    let itemIndex = 0;
+
+    const placeholderMessage = 'No items yet. Use the search box to add products.';
+
+    function resetResults() {
+        resultsBox.innerHTML = '';
+        resultsBox.classList.add('d-none');
+    }
+
+    function ensurePlaceholderRow() {
+        if (!itemsTableBody.querySelector('tr')) {
+            const row = document.createElement('tr');
+            row.id = 'inbound-empty-row';
+            row.className = 'text-muted text-center';
+            const cell = document.createElement('td');
+            cell.colSpan = 5;
+            cell.textContent = placeholderMessage;
+            row.appendChild(cell);
+            itemsTableBody.appendChild(row);
+        }
+    }
+
+    function addItem(variant) {
+        const existingRow = itemsTableBody.querySelector(`tr[data-variant-id="${variant.id}"]`);
+        if (existingRow) {
+            const quantityInput = existingRow.querySelector('input[name*="[quantity]"]');
+            if (quantityInput) {
+                quantityInput.focus();
+            }
+            existingRow.classList.add('table-success');
+            setTimeout(() => existingRow.classList.remove('table-success'), 800);
+            return;
+        }
+
+        const placeholder = itemsTableBody.querySelector('#inbound-empty-row');
+        if (placeholder) {
+            placeholder.remove();
+        }
+
+        const row = document.createElement('tr');
+        row.dataset.variantId = variant.id;
+
+        const productCell = document.createElement('td');
+        const nameStrong = document.createElement('strong');
+        nameStrong.textContent = variant.label || variant.product_name || ('SKU ' + variant.sku);
+        productCell.appendChild(nameStrong);
+
+        if (variant.variant_name) {
+            const variantLine = document.createElement('div');
+            variantLine.className = 'text-muted small';
+            variantLine.textContent = variant.variant_name;
+            productCell.appendChild(variantLine);
+        }
+
+        const hiddenField = document.createElement('input');
+        hiddenField.type = 'hidden';
+        hiddenField.name = `items[${itemIndex}][product_variant_id]`;
+        hiddenField.value = variant.id;
+        productCell.appendChild(hiddenField);
+        row.appendChild(productCell);
+
+        const skuCell = document.createElement('td');
+        const skuBadge = document.createElement('span');
+        skuBadge.className = 'badge bg-light text-dark';
+        skuBadge.textContent = variant.sku || 'N/A';
+        skuCell.appendChild(skuBadge);
+        row.appendChild(skuCell);
+
+        const quantityCell = document.createElement('td');
+        const quantityInput = document.createElement('input');
+        quantityInput.type = 'number';
+        quantityInput.name = `items[${itemIndex}][quantity]`;
+        quantityInput.className = 'form-control';
+        quantityInput.min = '1';
+        quantityInput.value = '1';
+        quantityInput.required = true;
+        quantityCell.appendChild(quantityInput);
+        row.appendChild(quantityCell);
+
+        const noteCell = document.createElement('td');
+        const noteInput = document.createElement('input');
+        noteInput.type = 'text';
+        noteInput.name = `items[${itemIndex}][notes]`;
+        noteInput.className = 'form-control';
+        noteInput.placeholder = 'Line notes (optional)';
+        noteCell.appendChild(noteInput);
+        row.appendChild(noteCell);
+
+        const actionCell = document.createElement('td');
+        actionCell.className = 'text-end';
+        const removeButton = document.createElement('button');
+        removeButton.type = 'button';
+        removeButton.className = 'btn btn-link text-danger p-0 remove-inbound-item';
+        removeButton.innerHTML = '<i class="bi bi-x-circle"></i>';
+        actionCell.appendChild(removeButton);
+        row.appendChild(actionCell);
+
+        itemsTableBody.appendChild(row);
+        itemIndex += 1;
+
+        quantityInput.focus();
+    }
+
+    async function searchVariants(term) {
+        try {
+            const response = await fetch(`${searchEndpoint}?q=${encodeURIComponent(term)}`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Response not OK');
+            }
+
+            const data = await response.json();
+            renderResults(Array.isArray(data) ? data : []);
+        } catch (error) {
+            console.warn('Unable to search product variants', error);
+            renderResults([]);
+        }
+    }
+
+    function renderResults(variants) {
+        resultsBox.innerHTML = '';
+        if (!variants.length) {
+            resetResults();
+            return;
+        }
+
+        variants.forEach((variant) => {
+            const option = document.createElement('button');
+            option.type = 'button';
+            option.className = 'list-group-item list-group-item-action inbound-result-item';
+            option.dataset.id = variant.id;
+            option.dataset.label = variant.label || '';
+            option.dataset.sku = variant.sku || '';
+            option.dataset.productName = variant.product_name || '';
+            option.dataset.variantName = variant.variant_name || '';
+
+            const title = document.createElement('div');
+            title.className = 'fw-semibold';
+            title.textContent = variant.label || variant.sku;
+
+            const subtitle = document.createElement('div');
+            subtitle.className = 'small text-muted';
+            subtitle.textContent = 'SKU: ' + (variant.sku || 'N/A');
+
+            option.appendChild(title);
+            option.appendChild(subtitle);
+            resultsBox.appendChild(option);
+        });
+
+        resultsBox.classList.remove('d-none');
+    }
+
+    searchInput.addEventListener('input', (event) => {
+        const term = event.target.value.trim();
+        clearTimeout(debounceTimer);
+
+        if (term.length < 2) {
+            resetResults();
+            return;
+        }
+
+        debounceTimer = setTimeout(() => {
+            searchVariants(term);
+        }, 250);
+    });
+
+    resultsBox.addEventListener('click', (event) => {
+        const option = event.target.closest('.inbound-result-item');
+        if (!option) {
+            return;
+        }
+
+        const variant = {
+            id: option.dataset.id,
+            label: option.dataset.label,
+            sku: option.dataset.sku,
+            product_name: option.dataset.productName,
+            variant_name: option.dataset.variantName
+        };
+
+        addItem(variant);
+        resetResults();
+        searchInput.value = '';
+        searchInput.focus();
+    });
+
+    itemsTableBody.addEventListener('click', (event) => {
+        if (event.target.closest('.remove-inbound-item')) {
+            event.preventDefault();
+            const row = event.target.closest('tr');
+            if (row) {
+                row.remove();
+            }
+            if (!itemsTableBody.querySelector('tr[data-variant-id]')) {
+                itemsTableBody.innerHTML = '';
+                ensurePlaceholderRow();
+            }
+        }
+    });
+
+    document.addEventListener('click', (event) => {
+        if (resultsBox.classList.contains('d-none')) {
+            return;
+        }
+        if (event.target === searchInput || resultsBox.contains(event.target)) {
+            return;
+        }
+        resetResults();
+    });
+
+    inboundForm.addEventListener('submit', (event) => {
+        const hasItems = itemsTableBody.querySelectorAll('tr[data-variant-id]').length > 0;
+        if (!hasItems) {
+            event.preventDefault();
+            alert('Please add at least one product to the inbound receipt.');
+        }
+    });
+
+    inboundModal.addEventListener('hidden.bs.modal', () => {
+        inboundForm.reset();
+        searchInput.value = '';
+        resetResults();
+        itemsTableBody.innerHTML = '';
+        itemIndex = 0;
+        ensurePlaceholderRow();
+    });
+
+    ensurePlaceholderRow();
+});
+</script>
+@endpush
 @endsection
