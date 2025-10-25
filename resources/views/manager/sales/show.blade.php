@@ -155,6 +155,29 @@
             </div>
         </div>
 
+        @if(!($order->payment && $order->payment->status === 'completed'))
+        <!-- Online Payment Actions -->
+        <div class="card mb-3">
+            <div class="card-header bg-warning text-dark">
+                <i class="bi bi-credit-card"></i> Thanh toán trực tuyến
+            </div>
+            <div class="card-body">
+                <a href="{{ route('payment.vnpay.create', ['order' => $order->id]) }}" class="btn btn-primary w-100">
+                    <i class="bi bi-credit-card"></i> Thanh toán VNPAY
+                </a>
+                <a href="{{ route('payment.checkoutvn.create', ['order' => $order->id]) }}" class="btn btn-outline-primary w-100 mt-2">
+                    <i class="bi bi-credit-card"></i> Thanh toán Checkout.vn
+                </a>
+                @if(app()->environment('local'))
+                <a href="{{ route('payment.testqr.show', ['order' => $order->id]) }}" class="btn btn-outline-secondary w-100 mt-2">
+                    <i class="bi bi-qr-code"></i> Test QR (Local)
+                </a>
+                @endif
+                <small class="text-muted d-block mt-2">Hỗ trợ thẻ nội địa/QR, chuyển hướng qua cổng VNPAY.</small>
+            </div>
+        </div>
+        @endif
+
         <!-- Payment Information Card -->
         @if($order->payment)
         <div class="card mb-3">

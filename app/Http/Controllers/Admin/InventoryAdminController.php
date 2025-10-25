@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Validation\Rule;
 
 class InventoryAdminController extends AdminController
 {
@@ -165,6 +166,36 @@ class InventoryAdminController extends AdminController
         // Return appropriate view based on user role
         $viewPrefix = ($user && ($user->role->name === 'Manager' || $user->role->name === 'Inventory Manager')) ? 'manager' : 'admin';
         return view("{$viewPrefix}.inventory.index", compact('inventories', 'warehouses'));
+    }
+
+    /**
+     * Create a new warehouse (Admin only)
+     */
+    public function storeWarehouse(Request $request)
+    {
+        // This route is under admin middleware; extra guard for clarity
+        $user = Auth::user();
+        if (!$user || $user->role->name !== 'Admin') {
+            return back()->with('error', 'Chỉ Admin mới có quyền thêm kho.');
+        }
+
+        $validator = Validator::make($request->all(), [
+            'name' => ['required', 'string', 'max:255', Rule::unique('warehouses', 'name')],
+        ], [
+            'name.required' => 'Vui lòng nhập tên kho.',
+            'name.unique' => 'Tên kho đã tồn tại.',
+        ]);
+
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput();
+        }
+
+        Warehouse::create([
+            'name' => $request->name,
+            'location' => $request->input('location'), // optional, may be null
+        ]);
+
+        return back()->with('success', 'Đã tạo kho hàng mới.');
     }
 
     /**

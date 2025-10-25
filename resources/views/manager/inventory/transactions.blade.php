@@ -35,11 +35,11 @@
             </div>
             <div class="col-md-2">
                 <label class="form-label">Từ ngày</label>
-                <input type="date" class="form-control" name="date_from" value="{{ request('date_from') }}">
+                <input type="date" class="form-control" name="start_date" value="{{ request('date_from') }}">
             </div>
             <div class="col-md-2">
                 <label class="form-label">Đến ngày</label>
-                <input type="date" class="form-control" name="date_to" value="{{ request('date_to') }}">
+                <input type="date" class="form-control" name="end_date" value="{{ request('date_to') }}">
             </div>
             <div class="col-md-3 d-flex align-items-end gap-2">
                 <button type="submit" class="btn btn-primary">
@@ -66,41 +66,56 @@
                         <th>Kho hàng</th>
                         <th>Loại</th>
                         <th>Số lượng</th>
-                        <th>Tham chiếu</th>
                         <th>Ghi chú</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($transactions as $transaction)
-                    <tr>
-                        <td>{{ $transaction->created_at->format('d M, Y H:i') }}</td>
+                    @forelse ($transactions as $transaction)
+                        @php
+                        $type = $transaction->type ?? null;
+                        $badge = $type === 'inbound' ? 'bg-success'
+                                : ($type === 'outbound' ? 'bg-danger' : 'bg-warning');
+                        $typeLabel = $type === 'inbound' ? 'Nhập kho'
+                                    : ($type === 'outbound' ? 'Xuất kho' : 'Điều chỉnh');
+                        $qty = $transaction->quantity ?? null;
+                        @endphp
+
+                        <tr>
+                        <td>{{ $transaction->created_at?->format('d M, Y H:i') ?? '-' }}</td>
+
                         <td>
-                            <strong>{{ $transaction->inventory->productVariant->product->name }}</strong>
-                            <br>
-                            <small class="text-muted">{{ $transaction->inventory->productVariant->sku }}</small>
+                            {{ $transaction->productVariant?->product?->name ?? 'N/A' }}
+                            <small class="text-muted">
+                            {{ $transaction->productVariant?->sku ?? 'N/A' }}
+                            </small>
                         </td>
-                        <td>{{ $transaction->inventory->warehouse->name }}</td>
+
+                        <td>{{ $transaction->warehouse?->name ?? 'N/A' }}</td>
+
                         <td>
-                            <span class="badge
-                                @if($transaction->type == 'inbound') bg-success
-                                @elseif($transaction->type == 'outbound') bg-danger
-                                @else bg-warning
-                                @endif">
-                                @if($transaction->type == 'inbound') Nhập kho
-                                @elseif($transaction->type == 'outbound') Xuất kho
-                                @else Điều chỉnh
-                                @endif
-                            </span>
+                            <span class="badge {{ $badge }}">{{ $typeLabel }}</span>
                         </td>
+
                         <td>
-                            <strong class="{{ $transaction->quantity > 0 ? 'text-success' : 'text-danger' }}">
-                                {{ $transaction->quantity > 0 ? '+' : '' }}{{ $transaction->quantity }}
+                            @if (is_numeric($qty))
+                            <strong class="{{ $qty > 0 ? 'text-success' : 'text-danger' }}">
+                                {{ $qty > 0 ? '+' : '' }}{{ $qty }}
                             </strong>
+                            @else
+                            <span class="text-muted">-</span>
+                            @endif
                         </td>
-                        <td><small>{{ $transaction->reference_number ?? 'N/A' }}</small></td>
                         <td><small>{{ $transaction->notes ?? '-' }}</small></td>
-                    </tr>
-                    @endforeach
+                        </tr>
+
+                    @empty
+                        <tr>
+                        <td colspan="7" class="text-center py-5">
+                            <i class="bi bi-inbox" style="font-size: 4rem; color: var(--light-sky);"></i>
+                            <p class="text-muted mt-3">Không tìm thấy giao dịch nào</p>
+                        </td>
+                        </tr>
+                    @endforelse
                 </tbody>
             </table>
         </div>

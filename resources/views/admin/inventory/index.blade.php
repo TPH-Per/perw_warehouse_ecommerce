@@ -1,28 +1,28 @@
 @extends('layouts.admin')
 
-@section('title', 'Inventory Management')
+@section('title', 'Quản lý kho hàng')
 
 @section('content')
 <div class="page-header">
     <div>
-        <h1><i class="bi bi-boxes"></i> Inventory Management</h1>
-        <p class="text-muted mb-0">Track and manage product inventory across warehouses</p>
+        <h1><i class="bi bi-boxes"></i> Quản lý kho hàng</h1>
+        <p class="text-muted mb-0">Theo dõi và quản lý tồn kho sản phẩm tại các kho</p>
     </div>
 </div>
 
 @if(session('inbound_result'))
     @php($inboundResults = session('inbound_result'))
     <div class="alert alert-info">
-        <h5 class="mb-2"><i class="bi bi-check-circle"></i> Inbound receipt recorded</h5>
+        <h5 class="mb-2"><i class="bi bi-check-circle"></i> Đã ghi nhận phiếu nhập kho</h5>
         <ul class="mb-0">
             @foreach($inboundResults as $row)
                 <li>
                     <strong>{{ $row['variant']['full_label'] ?? ('SKU #' . ($row['variant']['sku'] ?? $row['transaction']['product_variant_id'])) }}</strong>
-                    — Received {{ abs($row['transaction']['quantity']) }} units.
+                    — Đã nhập {{ abs($row['transaction']['quantity']) }} đơn vị.
                     <span class="text-muted">
-                        (On-hand: {{ $row['inventory']['quantity_on_hand'] }},
-                        Reserved: {{ $row['inventory']['quantity_reserved'] }},
-                        Available: {{ $row['inventory']['available_quantity'] }})
+                        (Hiện có: {{ $row['inventory']['quantity_on_hand'] }},
+                        Đã đặt: {{ $row['inventory']['quantity_reserved'] }},
+                        Có sẵn: {{ $row['inventory']['available_quantity'] }})
                     </span>
                 </li>
             @endforeach
@@ -37,7 +37,7 @@
             <div class="icon">
                 <i class="bi bi-box-seam"></i>
             </div>
-            <h5>Total Items</h5>
+            <h5>Tổng số mặt hàng</h5>
             <div class="value">{{ $inventories->total() }}</div>
         </div>
     </div>
@@ -46,7 +46,7 @@
             <div class="icon bg-warning">
                 <i class="bi bi-exclamation-triangle"></i>
             </div>
-            <h5>Low Stock</h5>
+            <h5>Hàng gần hết</h5>
             <div class="value text-warning">{{ $inventories->filter(fn($i) => $i->quantity_on_hand <= $i->reorder_level)->count() }}</div>
         </div>
     </div>
@@ -55,7 +55,7 @@
             <div class="icon bg-danger">
                 <i class="bi bi-x-circle"></i>
             </div>
-            <h5>Out of Stock</h5>
+            <h5>Hết hàng</h5>
             <div class="value text-danger">{{ $inventories->where('quantity_on_hand', 0)->count() }}</div>
         </div>
     </div>
@@ -64,25 +64,56 @@
             <div class="icon bg-success">
                 <i class="bi bi-check-circle"></i>
             </div>
-            <h5>In Stock</h5>
+            <h5>Còn hàng</h5>
             <div class="value text-success">{{ $inventories->filter(fn($i) => $i->quantity_on_hand > $i->reorder_level)->count() }}</div>
         </div>
     </div>
 </div>
+
+<!-- Create Warehouse (Admin only) -->
+<div class="card mb-4">
+    <div class="card-header">
+        <i class="bi bi-building"></i> Thêm kho hàng mới
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ route('admin.inventory.warehouses.store') }}" class="row g-3">
+            @csrf
+            <div class="col-md-6">
+                <label class="form-label">Tên kho *</label>
+                <input type="text" name="name" class="form-control @error('name') is-invalid @enderror" placeholder="VD: Kho TP. Hồ Chí Minh" value="{{ old('name') }}" required>
+                @error('name')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Vị trí (tuỳ chọn)</label>
+                <input type="text" name="location" class="form-control" placeholder="Địa chỉ hoặc khu vực" value="{{ old('location') }}">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-success w-100">
+                    <i class="bi bi-plus-circle"></i> Thêm kho
+                </button>
+            </div>
+        </form>
+    </div>
+    <div class="card-footer small text-muted">
+        Chỉ Admin được phép thêm kho.
+    </div>
+    </div>
 
 <!-- Filters -->
 <div class="card mb-4">
     <div class="card-body">
         <form method="GET" action="{{ route('admin.inventory.index') }}" class="row g-3">
             <div class="col-md-4">
-                <label class="form-label">Search</label>
-                <input type="text" name="search" class="form-control" placeholder="Product name, SKU..."
+                <label class="form-label">Tìm kiếm</label>
+                <input type="text" name="search" class="form-control" placeholder="Tên sản phẩm, SKU..."
                        value="{{ request('search') }}">
             </div>
             <div class="col-md-3">
-                <label class="form-label">Warehouse</label>
+                <label class="form-label">Kho hàng</label>
                 <select name="warehouse_id" class="form-select">
-                    <option value="">All Warehouses</option>
+                    <option value="">Tất cả kho hàng</option>
                     @foreach($warehouses as $warehouse)
                         <option value="{{ $warehouse->id }}"
                                 {{ request('warehouse_id') == $warehouse->id ? 'selected' : '' }}>
@@ -92,12 +123,12 @@
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="form-label">Stock Level</label>
+                <label class="form-label">Mức tồn kho</label>
                 <select name="stock_level" class="form-select">
-                    <option value="">All Levels</option>
-                    <option value="out_of_stock" {{ request('stock_level') == 'out_of_stock' ? 'selected' : '' }}>Out of Stock</option>
-                    <option value="low_stock" {{ request('stock_level') == 'low_stock' ? 'selected' : '' }}>Low Stock</option>
-                    <option value="in_stock" {{ request('stock_level') == 'in_stock' ? 'selected' : '' }}>In Stock</option>
+                    <option value="">Tất cả mức</option>
+                    <option value="out_of_stock" {{ request('stock_level') == 'out_of_stock' ? 'selected' : '' }}>Hết hàng</option>
+                    <option value="low_stock" {{ request('stock_level') == 'low_stock' ? 'selected' : '' }}>Hàng gần hết</option>
+                    <option value="in_stock" {{ request('stock_level') == 'in_stock' ? 'selected' : '' }}>Còn hàng</option>
                 </select>
             </div>
             <div class="col-md-2">
@@ -106,7 +137,7 @@
                     <button type="submit" class="btn btn-primary">
                         <i class="bi bi-search"></i>
                     </button>
-                    <a href="{{ route('admin.inventory.low-stock') }}" class="btn btn-warning" title="View Low Stock">
+                    <a href="{{ route('admin.inventory.low-stock') }}" class="btn btn-warning" title="Xem hàng gần hết">
                         <i class="bi bi-exclamation-triangle"></i>
                     </a>
                 </div>
@@ -118,16 +149,16 @@
 <!-- Inventory Table -->
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <span><i class="bi bi-list"></i> Inventory Items ({{ $inventories->total() }} total)</span>
+        <span><i class="bi bi-list"></i> Danh sách tồn kho ({{ $inventories->total() }} tổng)</span>
         <div class="btn-group">
             <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#inboundModal">
-                <i class="bi bi-box-arrow-in-down"></i> New Inbound
+                <i class="bi bi-box-arrow-in-down"></i> Nhập kho mới
             </button>
             <a href="{{ route('admin.inventory.transactions') }}" class="btn btn-sm btn-info">
-                <i class="bi bi-clock-history"></i> Transactions
+                <i class="bi bi-clock-history"></i> Giao dịch
             </a>
             <a href="{{ route('admin.inventory.export') }}" class="btn btn-sm btn-success">
-                <i class="bi bi-download"></i> Export
+                <i class="bi bi-download"></i> Xuất
             </a>
         </div>
     </div>
@@ -137,14 +168,14 @@
             <table class="table table-striped table-hover">
                 <thead>
                     <tr>
-                        <th>Product</th>
-                        <th>Variant (SKU)</th>
-                        <th>Warehouse</th>
-                        <th>On Hand</th>
-                        <th>Reorder Level</th>
-                        <th>Status</th>
-                        <th>Last Updated</th>
-                        <th>Actions</th>
+                        <th>Sản phẩm</th>
+                        <th>Mẫu mã (SKU)</th>
+                        <th>Kho hàng</th>
+                        <th>Hiện có</th>
+                        <th>Mức đặt hàng lại</th>
+                        <th>Trạng thái</th>
+                        <th>Cập nhật gần nhất</th>
+                        <th>Hành động</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -167,21 +198,21 @@
                         <td>{{ $inventory->reorder_level }}</td>
                         <td>
                             @if($inventory->quantity_on_hand == 0)
-                                <span class="badge bg-danger">Out of Stock</span>
+                                <span class="badge bg-danger">Hết hàng</span>
                             @elseif($inventory->quantity_on_hand <= $inventory->reorder_level)
-                                <span class="badge bg-warning">Low Stock</span>
+                                <span class="badge bg-warning">Hàng gần hết</span>
                             @else
-                                <span class="badge bg-success">In Stock</span>
+                                <span class="badge bg-success">Còn hàng</span>
                             @endif
                         </td>
                         <td>{{ $inventory->updated_at->format('M d, Y') }}</td>
                         <td>
                             <div class="btn-group btn-group-sm">
                                 <a href="{{ route('admin.inventory.show', $inventory->id) }}"
-                                   class="btn btn-info" title="View Details">
+                                   class="btn btn-info" title="Xem chi tiết">
                                     <i class="bi bi-eye"></i>
                                 </a>
-                                <button type="button" class="btn btn-primary" title="Adjust Quantity"
+                                <button type="button" class="btn btn-primary" title="Điều chỉnh số lượng"
                                         data-bs-toggle="modal" data-bs-target="#adjustModal{{ $inventory->id }}">
                                     <i class="bi bi-pencil-square"></i>
                                 </button>
@@ -192,36 +223,36 @@
                                 <div class="modal-dialog">
                                     <div class="modal-content">
                                         <div class="modal-header">
-                                            <h5 class="modal-title">Adjust Inventory</h5>
+                                            <h5 class="modal-title">Điều chỉnh tồn kho</h5>
                                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                         </div>
                                         <form action="{{ route('admin.inventory.adjust', $inventory->id) }}" method="POST">
                                             @csrf
                                             <div class="modal-body">
                                                 <div class="mb-3">
-                                                    <label class="form-label">Current Quantity</label>
+                                                    <label class="form-label">Số lượng hiện có</label>
                                                     <input type="text" class="form-control" value="{{ $inventory->quantity_on_hand }}" disabled>
                                                 </div>
                                                 <div class="mb-3">
-                                                    <label class="form-label">Adjustment Type</label>
+                                                    <label class="form-label">Loại điều chỉnh</label>
                                                     <select name="adjustment_type" class="form-select" required>
-                                                        <option value="addition">Addition (+)</option>
-                                                        <option value="subtraction">Subtraction (-)</option>
-                                                        <option value="set">Set to Specific Value</option>
+                                                        <option value="addition">Cộng (+)</option>
+                                                        <option value="subtraction">Trừ (-)</option>
+                                                        <option value="set">Đặt giá trị cụ thể</option>
                                                     </select>
                                                 </div>
                                                 <div class="mb-3">
-                                                    <label class="form-label">Quantity</label>
+                                                    <label class="form-label">Số lượng</label>
                                                     <input type="number" name="quantity" class="form-control" min="0" required>
                                                 </div>
                                                 <div class="mb-3">
-                                                    <label class="form-label">Reason</label>
+                                                    <label class="form-label">Lý do</label>
                                                     <textarea name="reason" class="form-control" rows="2" required></textarea>
                                                 </div>
                                             </div>
                                             <div class="modal-footer">
-                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                                <button type="submit" class="btn btn-primary">Adjust Inventory</button>
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                                                <button type="submit" class="btn btn-primary">Điều chỉnh tồn kho</button>
                                             </div>
                                         </form>
                                     </div>
@@ -240,7 +271,7 @@
         @else
         <div class="text-center py-5">
             <i class="bi bi-inbox" style="font-size: 3em; color: #ccc;"></i>
-            <p class="text-muted mt-3">No inventory items found</p>
+            <p class="text-muted mt-3">Không tìm thấy mặt hàng tồn kho</p>
         </div>
         @endif
     </div>
@@ -254,63 +285,63 @@
                 @csrf
                 <div class="modal-header">
                     <h5 class="modal-title" id="inboundModalLabel">
-                        <i class="bi bi-box-arrow-in-down"></i> Record Inbound Receipt
+                        <i class="bi bi-box-arrow-in-down"></i> Ghi nhận phiếu nhập kho
                     </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
                 </div>
                 <div class="modal-body">
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label for="inbound-warehouse" class="form-label">Destination Warehouse *</label>
+                            <label for="inbound-warehouse" class="form-label">Kho đích *</label>
                             <select class="form-select" name="warehouse_id" id="inbound-warehouse" required>
-                                <option value="">Select warehouse...</option>
+                                <option value="">Chọn kho...</option>
                                 @foreach($warehouses as $warehouse)
                                     <option value="{{ $warehouse->id }}">{{ $warehouse->name }}</option>
                                 @endforeach
                             </select>
                         </div>
                         <div class="col-12">
-                            <label class="form-label">Search products *</label>
+                            <label class="form-label">Tìm kiếm sản phẩm *</label>
                             <div class="position-relative">
-                                <input type="text" class="form-control" id="inbound-search" placeholder="Type product name or SKU...">
+                                <input type="text" class="form-control" id="inbound-search" placeholder="Nhập tên sản phẩm hoặc SKU...">
                                 <div class="list-group position-absolute w-100 shadow-sm d-none" id="inbound-search-results" style="z-index: 1056;"></div>
                             </div>
-                            <small class="text-muted">Enter at least 2 characters, then pick products to add to this receipt.</small>
+                            <small class="text-muted">Nhập ít nhất 2 ký tự, sau đó chọn sản phẩm để thêm vào phiếu.</small>
                         </div>
                         <div class="col-12">
                             <div class="table-responsive">
                                 <table class="table align-middle" id="inbound-items-table">
                                     <thead>
                                         <tr>
-                                            <th>Product</th>
+                                            <th>Sản phẩm</th>
                                             <th>SKU</th>
-                                            <th width="15%">Quantity</th>
-                                            <th width="30%">Line notes (optional)</th>
+                                            <th width="15%">Số lượng</th>
+                                            <th width="30%">Ghi chú dòng (tuỳ chọn)</th>
                                             <th class="text-end" width="5%">#</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <tr id="inbound-empty-row" class="text-muted text-center">
-                                            <td colspan="5">No items yet. Use the search box to add products.</td>
+                                            <td colspan="5">Chưa có sản phẩm nào. Dùng ô tìm kiếm để thêm sản phẩm.</td>
                                         </tr>
                                     </tbody>
                                 </table>
                             </div>
                         </div>
                         <div class="col-12">
-                            <label class="form-label">Receipt notes (optional)</label>
-                            <textarea class="form-control" name="notes" rows="2" placeholder="PO number, supplier, transfer reference..."></textarea>
+                            <label class="form-label">Ghi chú phiếu (tuỳ chọn)</label>
+                            <textarea class="form-control" name="notes" rows="2" placeholder="Số PO, nhà cung cấp, tham chiếu chuyển kho..."></textarea>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer justify-content-between">
                     <span class="text-muted small">
-                        Each line will be recorded as an inbound inventory transaction.
+                        Mỗi dòng sẽ được ghi nhận như một giao dịch nhập kho.
                     </span>
                     <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
                         <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-save"></i> Save Receipt
+                            <i class="bi bi-save"></i> Lưu phiếu
                         </button>
                     </div>
                 </div>
@@ -335,7 +366,7 @@ document.addEventListener('DOMContentLoaded', function () {
     let debounceTimer;
     let itemIndex = 0;
 
-    const placeholderMessage = 'No items yet. Use the search box to add products.';
+    const placeholderMessage = 'Chưa có sản phẩm nào. Dùng ô tìm kiếm để thêm sản phẩm.';
 
     function resetResults() {
         resultsBox.innerHTML = '';
@@ -417,7 +448,7 @@ document.addEventListener('DOMContentLoaded', function () {
         noteInput.type = 'text';
         noteInput.name = `items[${itemIndex}][notes]`;
         noteInput.className = 'form-control';
-        noteInput.placeholder = 'Line notes (optional)';
+        noteInput.placeholder = 'Ghi chú dòng (tuỳ chọn)';
         noteCell.appendChild(noteInput);
         row.appendChild(noteCell);
 
@@ -551,7 +582,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const hasItems = itemsTableBody.querySelectorAll('tr[data-variant-id]').length > 0;
         if (!hasItems) {
             event.preventDefault();
-            alert('Please add at least one product to the inbound receipt.');
+            alert('Vui lòng thêm ít nhất một sản phẩm vào phiếu nhập.');
         }
     });
 

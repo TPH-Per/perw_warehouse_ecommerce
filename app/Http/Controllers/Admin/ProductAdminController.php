@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class ProductAdminController extends AdminController
 {
@@ -370,5 +371,54 @@ class ProductAdminController extends AdminController
         } catch (\Exception $e) {
             return $this->errorResponse('Failed to delete image: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Create a new product category (quick add on products index)
+     */
+    public function storeCategory(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255|unique:categories,name',
+        ], [
+            'name.required' => 'Vui lòng nhập tên danh mục.',
+            'name.unique' => 'Danh mục đã tồn tại.',
+        ]);
+
+        $name = trim($request->name);
+        $slugBase = Str::slug($name);
+        $slug = $slugBase;
+        $i = 1;
+        while (Category::where('slug', $slug)->exists()) {
+            $slug = $slugBase . '-' . (++$i);
+        }
+
+        Category::create([
+            'name' => $name,
+            'slug' => $slug,
+        ]);
+
+        return back()->with('success', 'Đã thêm danh mục mới.');
+    }
+
+    /**
+     * Create a new supplier (quick add on products index)
+     */
+    public function storeSupplier(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255|unique:suppliers,name',
+            'contact_info' => 'nullable|string|max:500',
+        ], [
+            'name.required' => 'Vui lòng nhập tên nhà cung cấp.',
+            'name.unique' => 'Nhà cung cấp đã tồn tại.',
+        ]);
+
+        Supplier::create([
+            'name' => trim($request->name),
+            'contact_info' => $request->contact_info,
+        ]);
+
+        return back()->with('success', 'Đã thêm nhà cung cấp mới.');
     }
 }

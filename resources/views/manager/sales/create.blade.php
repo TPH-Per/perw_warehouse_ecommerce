@@ -27,7 +27,7 @@
                                 id="warehouse_id" name="warehouse_id" required>
                             <option value="">Chọn kho hàng...</option>
                             @foreach($warehouses as $warehouse)
-                                <option value="{{ $warehouse->id }}" {{ old('warehouse_id') == $warehouse->id ? 'selected' : '' }}>
+                                <option value="{{ $warehouse->id }}" {{ (old('warehouse_id') ?? (auth()->user()->warehouse_id ?? null)) == $warehouse->id ? 'selected' : '' }}>
                                     {{ $warehouse->name }} - {{ $warehouse->location }}
                                 </option>
                             @endforeach
@@ -185,6 +185,12 @@ document.getElementById('warehouse_id').addEventListener('change', function() {
     if (!warehouseId) {
         document.getElementById('productList').innerHTML = '<div class="alert alert-info"><i class="bi bi-info-circle"></i> Vui lòng chọn kho hàng trước</div>';
         document.getElementById('addItemBtn').disabled = true;
+        // Reset selections when warehouse is cleared
+        selectedItems = [];
+        itemCounter = 0;
+        document.getElementById('itemsTableBody').innerHTML = '';
+        document.getElementById('itemsContainer').style.display = 'none';
+        updateSummary();
         return;
     }
 
@@ -207,6 +213,14 @@ document.getElementById('warehouse_id').addEventListener('change', function() {
         });
 });
 
+// Auto-load products if a warehouse is already selected (e.g., after validation redirect)
+document.addEventListener('DOMContentLoaded', function() {
+    const wh = document.getElementById('warehouse_id');
+    if (wh && wh.value) {
+        wh.dispatchEvent(new Event('change'));
+    }
+});
+
 // Add item button
 document.getElementById('addItemBtn').addEventListener('click', function() {
     if (availableProducts.length === 0) return;
@@ -214,13 +228,14 @@ document.getElementById('addItemBtn').addEventListener('click', function() {
     const selectHtml = `
         <select class="form-select product-select mb-2" data-item="${itemCounter}">
             <option value="">Chọn sản phẩm...</option>
-            ${availableProducts.map(product => `
-                <option value="${product.id}"
-                        data-price="${product.price}"
-                        data-sku="${product.sku}"
-                        data-name="${product.name}"
-                        data-variant="${product.variant_name}">
-                    ${product.name} - ${product.variant_name} (SKU: ${product.sku}) - ₫${parseFloat(product.price).toFixed(2)} (${product.quantity_on_hand} có sẵn)
+            ${availableProducts.map(p => `
+                <option value="${p.variant_id}"
+                        data-price="${p.price}"
+                        data-sku="${p.sku}"
+                        data-pname="${p.product_name}"
+                        data-vname="${p.variant_name}"
+                        data-available="${p.available_quantity}">
+                    ${p.product_name} - ${p.variant_name} (SKU: ${p.sku}) - ₫${parseFloat(p.price).toFixed(2)} (${p.available_quantity} có sẵn)
                 </option>
             `).join('')}
         </select>
@@ -236,14 +251,14 @@ document.getElementById('productList').addEventListener('change', function(e) {
         const selectedOption = e.target.options[e.target.selectedIndex];
         if (!selectedOption.value) return;
 
-        const productId = selectedOption.value;
-        const price = selectedOption.dataset.price;
+        const variantId = selectedOption.value;
+        const price = parseFloat(selectedOption.dataset.price);
         const sku = selectedOption.dataset.sku;
-        const name = selectedOption.dataset.name;
-        const variant = selectedOption.dataset.variant;
+        const name = selectedOption.dataset.pname;
+        const variant = selectedOption.dataset.vname;
 
         // Check if this product is already selected
-        if (selectedItems.some(item => item.productId === productId)) {
+        if (selectedItems.some(item => item.variantId === variantId)) {
             alert('Sản phẩm này đã được chọn');
             e.target.value = '';
             return;
@@ -251,17 +266,17 @@ document.getElementById('productList').addEventListener('change', function(e) {
 
         // Add to selected items
         selectedItems.push({
-            id: itemCounter,
-            productId: productId,
+            rowKey: itemCounter,
+            variantId: variantId,
             name: name,
             variant: variant,
             sku: sku,
-            price: parseFloat(price),
+            price: price,
             quantity: 1
         });
 
         // Add to table
-        addItemToTable(itemCounter, name, variant, sku, price, 1);
+        addItemToTable(itemCounter, variantId, name, variant, sku, price, 1);
 
         // Remove the select
         e.target.remove();
@@ -276,9 +291,9 @@ document.getElementById('productList').addEventListener('change', function(e) {
 });
 
 // Add item to table
-function addItemToTable(id, name, variant, sku, price, quantity) {
+function addItemToTable(rowKey, variantId, name, variant, sku, price, quantity) {
     const rowHtml = `
-        <tr id="item-row-${id}">
+        <tr id="item-row-${rowKey}">
             <td>
                 <strong>${name}</strong>
                 <br><small class="text-muted">${variant}</small>
@@ -287,16 +302,16 @@ function addItemToTable(id, name, variant, sku, price, quantity) {
             <td>₫${parseFloat(price).toFixed(2)}</td>
             <td>
                 <input type="number" class="form-control quantity-input"
-                       data-item="${id}" value="${quantity}" min="1" style="width: 80px;">
+                       data-item="${rowKey}" value="${quantity}" min="1" style="width: 80px;">
             </td>
             <td class="subtotal">₫${(price * quantity).toFixed(2)}</td>
             <td>
-                <button type="button" class="btn btn-sm btn-danger remove-item" data-item="${id}">
+                <button type="button" class="btn btn-sm btn-danger remove-item" data-item="${rowKey}">
                     <i class="bi bi-trash"></i>
                 </button>
             </td>
-            <input type="hidden" name="items[${id}][product_id]" value="${id}">
-            <input type="hidden" name="items[${id}][quantity]" class="quantity-hidden" value="${quantity}">
+            <input type="hidden" name="items[${rowKey}][variant_id]" value="${variantId}">
+            <input type="hidden" name="items[${rowKey}][quantity]" class="quantity-hidden" value="${quantity}">
         </tr>
     `;
 
@@ -306,9 +321,9 @@ function addItemToTable(id, name, variant, sku, price, quantity) {
 // Handle quantity change
 document.getElementById('itemsTableBody').addEventListener('input', function(e) {
     if (e.target.classList.contains('quantity-input')) {
-        const itemId = e.target.dataset.item;
+        const rowKey = e.target.dataset.item;
         const quantity = parseInt(e.target.value) || 1;
-        const item = selectedItems.find(i => i.id == itemId);
+        const item = selectedItems.find(i => i.rowKey == rowKey);
 
         if (item) {
             item.quantity = quantity;
@@ -323,13 +338,13 @@ document.getElementById('itemsTableBody').addEventListener('input', function(e) 
 document.getElementById('itemsTableBody').addEventListener('click', function(e) {
     if (e.target.classList.contains('remove-item') || e.target.closest('.remove-item')) {
         const button = e.target.classList.contains('remove-item') ? e.target : e.target.closest('.remove-item');
-        const itemId = button.dataset.item;
+        const rowKey = button.dataset.item;
 
         // Remove from selected items
-        selectedItems = selectedItems.filter(item => item.id != itemId);
+        selectedItems = selectedItems.filter(item => item.rowKey != rowKey);
 
         // Remove from table
-        document.getElementById(`item-row-${itemId}`).remove();
+        document.getElementById(`item-row-${rowKey}`).remove();
 
         // Hide container if no items
         if (selectedItems.length === 0) {

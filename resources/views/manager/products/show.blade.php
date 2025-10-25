@@ -175,7 +175,7 @@
                 @if($product->images && $product->images->count() > 0)
                     @foreach($product->images as $image)
                         <div class="mb-3">
-                            <img src="{{ asset('storage/' . $image->image_path) }}"
+                            <img src="{{ asset('storage/' . $image->image_url) }}"
                                  alt="{{ $product->name }}"
                                  class="img-fluid rounded"
                                  style="width: 100%;">

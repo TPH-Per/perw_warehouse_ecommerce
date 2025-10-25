@@ -1,15 +1,15 @@
 @extends('layouts.admin')
 
-@section('title', 'Users Management')
+@section('title', 'Quản lý người dùng')
 
 @section('content')
 <div class="page-header d-flex justify-content-between align-items-center">
     <div>
-        <h1><i class="bi bi-people"></i> Users Management</h1>
-        <p class="text-muted mb-0">Manage system users and customers</p>
+        <h1><i class="bi bi-people"></i> Quản lý người dùng</h1>
+        <p class="text-muted mb-0">Quản lý người dùng hệ thống và khách hàng</p>
     </div>
     <a href="{{ route('admin.users.create') }}" class="btn btn-primary">
-        <i class="bi bi-person-plus"></i> Add New User
+        <i class="bi bi-person-plus"></i> Thêm người dùng mới
     </a>
 </div>
 
@@ -20,7 +20,7 @@
             <div class="icon">
                 <i class="bi bi-people-fill"></i>
             </div>
-            <h5>Total Users</h5>
+            <h5>Tổng số người dùng</h5>
             <div class="value">{{ $users->total() }}</div>
         </div>
     </div>
@@ -29,7 +29,7 @@
             <div class="icon bg-primary">
                 <i class="bi bi-shield-check"></i>
             </div>
-            <h5>Admins</h5>
+            <h5>Quản trị viên</h5>
             <div class="value">{{ $users->filter(fn($u) => $u->role->name == 'Admin')->count() }}</div>
         </div>
     </div>
@@ -38,7 +38,7 @@
             <div class="icon bg-info">
                 <i class="bi bi-person"></i>
             </div>
-            <h5>End Users</h5>
+            <h5>Người dùng cuối</h5>
             <div class="value">{{ $users->filter(fn($u) => $u->role->name == 'End User')->count() }}</div>
         </div>
     </div>
@@ -47,7 +47,7 @@
             <div class="icon bg-success">
                 <i class="bi bi-check-circle"></i>
             </div>
-            <h5>Active</h5>
+            <h5>Hoạt động</h5>
             <div class="value">{{ $users->where('status', 'active')->count() }}</div>
         </div>
     </div>
@@ -58,14 +58,14 @@
     <div class="card-body">
         <form method="GET" action="{{ route('admin.users.index') }}" class="row g-3">
             <div class="col-md-5">
-                <label class="form-label">Search</label>
-                <input type="text" name="search" class="form-control" placeholder="Name, email, phone..."
+                <label class="form-label">Tìm kiếm</label>
+                <input type="text" name="search" class="form-control" placeholder="Tên, email, điện thoại..."
                        value="{{ request('search') }}">
             </div>
             <div class="col-md-3">
-                <label class="form-label">Role</label>
+                <label class="form-label">Vai trò</label>
                 <select name="role_id" class="form-select">
-                    <option value="">All Roles</option>
+                    <option value="">Tất cả vai trò</option>
                     @foreach($roles as $role)
                         <option value="{{ $role->id }}"
                                 {{ request('role_id') == $role->id ? 'selected' : '' }}>
@@ -75,12 +75,12 @@
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="form-label">Status</label>
+                <label class="form-label">Trạng thái</label>
                 <select name="status" class="form-select">
-                    <option value="">All Status</option>
-                    <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>Active</option>
-                    <option value="inactive" {{ request('status') == 'inactive' ? 'selected' : '' }}>Inactive</option>
-                    <option value="suspended" {{ request('status') == 'suspended' ? 'selected' : '' }}>Suspended</option>
+                    <option value="">Tất cả trạng thái</option>
+                    <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>Hoạt động</option>
+                    <option value="inactive" {{ request('status') == 'inactive' ? 'selected' : '' }}>Không hoạt động</option>
+                    <option value="suspended" {{ request('status') == 'suspended' ? 'selected' : '' }}>Tạm khóa</option>
                 </select>
             </div>
             <div class="col-md-1">
@@ -96,9 +96,9 @@
 <!-- Users Table -->
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <span><i class="bi bi-list"></i> Users List ({{ $users->total() }} total)</span>
+        <span><i class="bi bi-list"></i> Danh sách người dùng ({{ $users->total() }} tổng)</span>
         <a href="{{ route('admin.users.export') }}" class="btn btn-sm btn-success">
-            <i class="bi bi-download"></i> Export
+            <i class="bi bi-download"></i> Xuất
         </a>
     </div>
     <div class="card-body">
@@ -108,13 +108,13 @@
                 <thead>
                     <tr>
                         <th>ID</th>
-                        <th>User</th>
+                        <th>Người dùng</th>
                         <th>Email</th>
-                        <th>Phone</th>
-                        <th>Role</th>
-                        <th>Status</th>
-                        <th>Joined</th>
-                        <th>Actions</th>
+                        <th>Số điện thoại</th>
+                        <th>Vai trò</th>
+                        <th>Trạng thái</th>
+                        <th>Tham gia</th>
+                        <th>Hành động</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -124,7 +124,7 @@
                         <td>
                             <strong>{{ $user->full_name }}</strong>
                             @if($user->email_verified_at)
-                                <i class="bi bi-patch-check-fill text-success" title="Verified"></i>
+                                <i class="bi bi-patch-check-fill text-success" title="Đã xác minh"></i>
                             @endif
                         </td>
                         <td>{{ $user->email }}</td>
@@ -138,22 +138,22 @@
                         </td>
                         <td>
                             @if($user->status == 'active')
-                                <span class="badge bg-success">Active</span>
+                                <span class="badge bg-success">Hoạt động</span>
                             @elseif($user->status == 'suspended')
-                                <span class="badge bg-danger">Suspended</span>
+                                <span class="badge bg-danger">Tạm khóa</span>
                             @else
-                                <span class="badge bg-secondary">{{ ucfirst($user->status) }}</span>
+                                <span class="badge bg-secondary">Không hoạt động</span>
                             @endif
                         </td>
                         <td>{{ $user->created_at->format('M d, Y') }}</td>
                         <td>
                             <div class="btn-group btn-group-sm">
                                 <a href="{{ route('admin.users.show', $user->id) }}"
-                                   class="btn btn-info" title="View">
+                                   class="btn btn-info" title="Xem">
                                     <i class="bi bi-eye"></i>
                                 </a>
                                 <a href="{{ route('admin.users.edit', $user->id) }}"
-                                   class="btn btn-warning" title="Edit">
+                                   class="btn btn-warning" title="Chỉnh sửa">
                                     <i class="bi bi-pencil"></i>
                                 </a>
                                 @if($user->id != auth()->id())
@@ -161,8 +161,8 @@
                                         <form action="{{ route('admin.users.suspend', $user->id) }}" method="POST" class="d-inline">
                                             @csrf
                                             @method('PUT')
-                                            <button type="submit" class="btn btn-danger" title="Suspend"
-                                                    onclick="return confirm('Suspend this user?')">
+                                            <button type="submit" class="btn btn-danger" title="Tạm khóa"
+                                                    onclick="return confirm('Khóa tạm thời người dùng này?')">
                                                 <i class="bi bi-lock"></i>
                                             </button>
                                         </form>
@@ -170,8 +170,8 @@
                                         <form action="{{ route('admin.users.activate', $user->id) }}" method="POST" class="d-inline">
                                             @csrf
                                             @method('PUT')
-                                            <button type="submit" class="btn btn-success" title="Activate"
-                                                    onclick="return confirm('Activate this user?')">
+                                            <button type="submit" class="btn btn-success" title="Kích hoạt"
+                                                    onclick="return confirm('Kích hoạt người dùng này?')">
                                                 <i class="bi bi-unlock"></i>
                                             </button>
                                         </form>
@@ -191,7 +191,7 @@
         @else
         <div class="text-center py-5">
             <i class="bi bi-people" style="font-size: 3em; color: #ccc;"></i>
-            <p class="text-muted mt-3">No users found</p>
+            <p class="text-muted mt-3">Không tìm thấy người dùng</p>
         </div>
         @endif
     </div>

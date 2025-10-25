@@ -6,6 +6,9 @@ use App\Http\Controllers\Admin\ProductAdminController;
 use App\Http\Controllers\Admin\UserAdminController;
 use App\Http\Controllers\Admin\OrderAdminController;
 use App\Http\Controllers\Admin\InventoryAdminController;
+use App\Http\Controllers\Payment\VnpayController;
+use App\Http\Controllers\Payment\CheckoutVNController;
+use App\Http\Controllers\Payment\TestQrController;
 use App\Http\Controllers\AuthController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Log;
@@ -30,6 +33,33 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 Route::get('/', function () {
     return redirect()->route('login');
 });
+
+// VNPAY Payment Routes
+Route::prefix('payment/vnpay')->name('payment.vnpay.')->group(function () {
+    // Create payment and redirect (protected)
+    Route::get('/create/{order}', [VnpayController::class, 'create'])->middleware('auth')->name('create');
+
+    // Return URL (public)
+    Route::get('/return', [VnpayController::class, 'return'])->name('return');
+
+    // IPN (public, GET/POST depending on VNPAY config)
+    Route::match(['get', 'post'], '/ipn', [VnpayController::class, 'ipn'])->name('ipn');
+});
+
+// Checkout.vn Payment Routes
+Route::prefix('payment/checkoutvn')->name('payment.checkoutvn.')->group(function () {
+    Route::get('/create/{order}', [CheckoutVNController::class, 'create'])->middleware('auth')->name('create');
+    Route::get('/return', [CheckoutVNController::class, 'return'])->name('return');
+    Route::match(['get', 'post'], '/ipn', [CheckoutVNController::class, 'ipn'])->name('ipn');
+});
+
+// Local-only Test QR payment routes
+if (app()->environment('local')) {
+    Route::prefix('payment/test-qr')->name('payment.testqr.')->group(function () {
+        Route::get('/{order}', [TestQrController::class, 'show'])->middleware('auth')->name('show');
+        Route::post('/simulate/{order}', [TestQrController::class, 'simulate'])->middleware('auth')->name('simulate');
+    });
+}
 
 // Test pagination route
 Route::get('/test-pagination', function () {
@@ -123,6 +153,8 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
 
     // Product Management
     Route::resource('products', ProductAdminController::class);
+    Route::post('/products/categories', [ProductAdminController::class, 'storeCategory'])->name('products.categories.store');
+    Route::post('/products/suppliers', [ProductAdminController::class, 'storeSupplier'])->name('products.suppliers.store');
     Route::post('/products/{product}/variants', [ProductAdminController::class, 'addVariant'])->name('products.variants.store');
     Route::post('/products/{product}/images', [ProductAdminController::class, 'uploadImages'])->name('products.images.store');
     Route::delete('/product-images/{image}', [ProductAdminController::class, 'deleteImage'])->name('products.images.destroy');
@@ -154,6 +186,8 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         Route::get('/statistics', [InventoryAdminController::class, 'statistics'])->name('statistics');
         Route::get('/transactions', [InventoryAdminController::class, 'transactions'])->name('transactions');
         Route::get('/export', [InventoryAdminController::class, 'export'])->name('export');
+        // Warehouses
+        Route::post('/warehouses', [InventoryAdminController::class, 'storeWarehouse'])->name('warehouses.store');
 
         Route::get('/variants/search', [InventoryAdminController::class, 'searchVariants'])->name('variants.search');
         Route::post('/inbound', [InventoryAdminController::class, 'inbound'])->name('inbound');
