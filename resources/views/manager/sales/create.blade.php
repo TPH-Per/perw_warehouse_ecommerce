@@ -181,6 +181,7 @@ let itemCounter = 0;
 
 // Load products when warehouse is selected
 document.getElementById('warehouse_id').addEventListener('change', function() {
+    console.log('Warehouse change event triggered, warehouseId:', this.value);
     const warehouseId = this.value;
     if (!warehouseId) {
         document.getElementById('productList').innerHTML = '<div class="alert alert-info"><i class="bi bi-info-circle"></i> Vui lòng chọn kho hàng trước</div>';
@@ -194,22 +195,85 @@ document.getElementById('warehouse_id').addEventListener('change', function() {
         return;
     }
 
-    // Load products via AJAX
-    fetch(`/manager/sales/warehouse-products?warehouse_id=${warehouseId}`)
-        .then(response => response.json())
+    const baseUrl = '{{ route('manager.sales.warehouse-products') }}';
+    const url = baseUrl + '?warehouse_id=' + encodeURIComponent(warehouseId);
+
+    // Get CSRF token
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+    fetch(url, {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': csrfToken
+        }
+    })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('HTTP error ' + response.status);
+            }
+            return response.json();
+        })
         .then(data => {
-            availableProducts = data;
-            if (data.length === 0) {
-                document.getElementById('productList').innerHTML = '<div class="alert alert-warning"><i class="bi bi-exclamation-triangle"></i> Không có sản phẩm nào trong kho hàng này</div>';
-                document.getElementById('addItemBtn').disabled = true;
+            console.log('Received data:', data);
+            console.log('Data type:', typeof data);
+            console.log('Is array:', Array.isArray(data));
+            
+            // Ensure data is an array
+            if (Array.isArray(data)) {
+                availableProducts = data;
+            } else if (data && typeof data === 'object') {
+                // Try to convert object to array
+                const dataArray = Object.values(data);
+                if (Array.isArray(dataArray)) {
+                    console.log('Converted object to array with', dataArray.length, 'items');
+                    availableProducts = dataArray;
+                } else {
+                    console.error('Could not convert object to array:', data);
+                    availableProducts = [];
+                }
             } else {
-                document.getElementById('productList').innerHTML = '<div class="alert alert-success"><i class="bi bi-check-circle"></i> ' + data.length + ' sản phẩm có sẵn</div>';
-                document.getElementById('addItemBtn').disabled = false;
+                console.error('Expected array but received:', data);
+                availableProducts = [];
+            }
+
+            console.log('Available products count:', availableProducts.length);
+
+            const productListElement = document.getElementById('productList');
+            const addItemBtnElement = document.getElementById('addItemBtn');
+
+            if (!productListElement) {
+                console.error('Product list element not found');
+                return;
+            }
+
+            if (availableProducts.length === 0) {
+                productListElement.innerHTML = '<div class="alert alert-warning"><i class="bi bi-exclamation-triangle"></i> Không có sản phẩm nào trong kho hàng này</div>';
+                if (addItemBtnElement) {
+                    addItemBtnElement.disabled = true;
+                }
+            } else {
+                productListElement.innerHTML = '<div class="alert alert-success"><i class="bi bi-check-circle"></i> ' + availableProducts.length + ' sản phẩm có sẵn</div>';
+                if (addItemBtnElement) {
+                    addItemBtnElement.disabled = false;
+                }
             }
         })
         .catch(error => {
-            console.error('Error:', error);
-            document.getElementById('productList').innerHTML = '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle"></i> Lỗi khi tải sản phẩm</div>';
+            console.error('Error in AJAX request:', error);
+            availableProducts = [];
+            let errorMessage = 'Lỗi khi tải sản phẩm';
+            if (error.message) {
+                errorMessage += ': ' + error.message;
+            }
+
+            const productListElement = document.getElementById('productList');
+            if (productListElement) {
+                productListElement.innerHTML = '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle"></i> ' + errorMessage + '</div>';
+            } else {
+                console.error('Product list element not found in error handler');
+            }
         });
 });
 
@@ -217,32 +281,45 @@ document.getElementById('warehouse_id').addEventListener('change', function() {
 document.addEventListener('DOMContentLoaded', function() {
     const wh = document.getElementById('warehouse_id');
     if (wh && wh.value) {
-        wh.dispatchEvent(new Event('change'));
+        // Add a small delay to ensure the page is fully loaded
+        setTimeout(() => {
+            wh.dispatchEvent(new Event('change'));
+        }, 100);
     }
 });
 
 // Add item button
 document.getElementById('addItemBtn').addEventListener('click', function() {
-    if (availableProducts.length === 0) return;
+    // Ensure availableProducts is an array and has items
+    if (!Array.isArray(availableProducts) || availableProducts.length === 0) {
+        console.warn('availableProducts is not a valid array or is empty:', availableProducts);
+        return;
+    }
 
-    const selectHtml = `
-        <select class="form-select product-select mb-2" data-item="${itemCounter}">
-            <option value="">Chọn sản phẩm...</option>
-            ${availableProducts.map(p => `
-                <option value="${p.variant_id}"
-                        data-price="${p.price}"
-                        data-sku="${p.sku}"
-                        data-pname="${p.product_name}"
-                        data-vname="${p.variant_name}"
-                        data-available="${p.available_quantity}">
-                    ${p.product_name} - ${p.variant_name} (SKU: ${p.sku}) - ₫${parseFloat(p.price).toFixed(2)} (${p.available_quantity} có sẵn)
-                </option>
-            `).join('')}
-        </select>
-    `;
+    // Additional safety check
+    try {
+        const selectHtml = `
+            <select class="form-select product-select mb-2" data-item="${itemCounter}">
+                <option value="">Chọn sản phẩm...</option>
+                ${availableProducts.map(p => `
+                    <option value="${p.variant_id}"
+                            data-price="${p.price}"
+                            data-sku="${p.sku}"
+                            data-pname="${p.product_name}"
+                            data-vname="${p.variant_name}"
+                            data-available="${p.available_quantity}">
+                        ${p.product_name} - ${p.variant_name} (SKU: ${p.sku}) - ₫${parseFloat(p.price).toFixed(2)} (${p.available_quantity} có sẵn)
+                    </option>
+                `).join('')}
+            </select>
+        `;
 
-    document.getElementById('productList').insertAdjacentHTML('beforeend', selectHtml);
-    itemCounter++;
+        document.getElementById('productList').insertAdjacentHTML('beforeend', selectHtml);
+        itemCounter++;
+    } catch (error) {
+        console.error('Error creating product selection:', error);
+        alert('Có lỗi xảy ra khi tạo danh sách sản phẩm. Vui lòng thử lại.');
+    }
 });
 
 // Handle product selection

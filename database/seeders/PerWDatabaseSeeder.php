@@ -76,9 +76,11 @@ class PerWDatabaseSeeder extends Seeder
             ['code' => 'vnpay'],
             ['name' => 'VNPAY', 'is_active' => true]
         );
+        // Checkout.vn payment method (Removed)
+
         PaymentMethod::firstOrCreate(
-            ['code' => 'checkoutvn'],
-            ['name' => 'Checkout.vn', 'is_active' => true]
+            ['code' => 'cod'],
+            ['name' => 'Thanh toán khi nhận hàng', 'is_active' => true]
         );
 
         // Create suppliers

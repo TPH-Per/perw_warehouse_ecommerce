@@ -15,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 class DirectSalesController extends Controller
 {
@@ -66,7 +67,7 @@ class DirectSalesController extends Controller
     public function create()
     {
         // Limit warehouses to the manager's assigned warehouse when applicable
-        $user = auth()->user();
+        $user = Auth::user();
         if ($user && $user->role && $user->role->name === 'Inventory Manager' && $user->warehouse_id) {
             $warehouses = Warehouse::where('id', $user->warehouse_id)->get();
         } else {
@@ -101,7 +102,7 @@ class DirectSalesController extends Controller
         DB::beginTransaction();
         try {
             // Enforce assigned warehouse for Inventory Manager accounts
-            $user = auth()->user();
+            $user = Auth::user();
             $warehouseId = $request->warehouse_id;
             if ($user && $user->role && $user->role->name === 'Inventory Manager' && $user->warehouse_id) {
                 // Override to assigned warehouse to prevent cross-warehouse access
@@ -148,7 +149,7 @@ class DirectSalesController extends Controller
 
             // Create order (direct sale - walk-in customer, no shipping)
             $order = PurchaseOrder::create([
-                'user_id' => auth()->id(), // Associate with current manager to satisfy NOT NULL schema
+                'user_id' => Auth::id(), // Associate with current manager to satisfy NOT NULL schema
                 'order_code' => $orderCode,
                 // Direct sales are considered delivered immediately (no shipping flow)
                 'status' => 'delivered',
@@ -238,29 +239,58 @@ class DirectSalesController extends Controller
      */
     public function getWarehouseProducts(Request $request)
     {
+        // Debug: Log the request
+        Log::info('Warehouse products request', [
+            'warehouse_id' => $request->warehouse_id,
+            'user_authenticated' => Auth::check(),
+            'user_id' => Auth::id(),
+            'user_role' => Auth::check() ? Auth::user()->role->name ?? null : null
+        ]);
+
         $warehouseId = $request->warehouse_id;
         // Enforce assigned warehouse for Inventory Manager accounts on product lookup
-        $user = auth()->user();
+        $user = Auth::user();
         if ($user && $user->role && $user->role->name === 'Inventory Manager' && $user->warehouse_id) {
             $warehouseId = (int) $user->warehouse_id;
         }
 
-        $products = Inventory::with(['productVariant.product'])
+        // Validate warehouse ID
+        if (!$warehouseId) {
+            Log::warning('No warehouse ID provided');
+            return response()->json([]);
+        }
+
+        $inventories = Inventory::with(['productVariant.product'])
             ->where('warehouse_id', $warehouseId)
             ->where('quantity_on_hand', '>', 0)
-            ->get()
+            ->get();
+
+        $products = $inventories
+            ->filter(function($inventory) {
+                // Filter out inventory records without product variants
+                return $inventory->productVariant !== null && $inventory->productVariant->product !== null;
+            })
             ->map(function($inventory) {
                 return [
                     'variant_id' => $inventory->productVariant->id,
-                    'product_name' => $inventory->productVariant->product->name,
-                    'variant_name' => $inventory->productVariant->name,
-                    'sku' => $inventory->productVariant->sku,
-                    'price' => $inventory->productVariant->price,
+                    'product_name' => $inventory->productVariant->product->name ?? 'Unknown Product',
+                    'variant_name' => $inventory->productVariant->name ?? 'Unknown Variant',
+                    'sku' => $inventory->productVariant->sku ?? 'N/A',
+                    'price' => $inventory->productVariant->price ?? 0,
                     'available_quantity' => $inventory->quantity_on_hand - $inventory->quantity_reserved,
                 ];
             });
 
-        return response()->json($products);
+        // Debug: Log the response
+        Log::info('Warehouse products response', [
+            'warehouse_id' => $warehouseId,
+            'user_id' => $user->id ?? null,
+            'product_count' => $products->count(),
+            'products' => $products
+        ]);
+
+        // Convert Collection to array to ensure proper JSON serialization
+        return response()->json($products->values());
     }
 
     /**

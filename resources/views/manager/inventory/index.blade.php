@@ -1,4 +1,4 @@
-﻿@extends('layouts.manager')
+﻿﻿@extends('layouts.manager')
 
 @section('title', 'Kho hàng')
 
@@ -123,11 +123,11 @@
 
             <tr>
               <td>
-                <strong>{{ $inventory->productVariant->product->name }}</strong>
-                <div class="text-muted small">{{ $inventory->productVariant->name }}</div>
+                <strong>{{ $inventory->productVariant?->product->name ?? 'N/A' }}</strong>
+                <div class="text-muted small">{{ $inventory->productVariant?->name ?? 'N/A' }}</div>
               </td>
 
-              <td>{{ $inventory->productVariant->sku }}</td>
+              <td>{{ $inventory->productVariant?->sku ?? 'N/A' }}</td>
 
               @if (! $isWarehouseScopedManager)
                 <td>{{ $inventory->warehouse->name }}</td>

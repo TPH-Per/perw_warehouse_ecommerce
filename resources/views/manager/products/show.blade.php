@@ -45,10 +45,14 @@
                 <div class="row">
                     <div class="col-md-6">
                         <strong>Trạng thái:</strong><br>
-                        @if($product->status == 'active')
-                            <span class="badge bg-success">Hoạt động</span>
+                        @if($product->status == 'published')
+                            <span class="badge bg-success">Đã xuất bản</span>
+                        @elseif($product->status == 'draft')
+                            <span class="badge bg-secondary">Bản nháp</span>
+                        @elseif($product->status == 'archived')
+                            <span class="badge bg-danger">Đã lưu trữ</span>
                         @else
-                            <span class="badge bg-secondary">Không hoạt động</span>
+                            <span class="badge bg-secondary">{{ ucfirst($product->status) }}</span>
                         @endif
                     </div>
                     <div class="col-md-6">

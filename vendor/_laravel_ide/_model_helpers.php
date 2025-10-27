@@ -5,9 +5,10 @@ namespace App\Models {
     /**
      * App\Models\Address
      *
+     * @property \Illuminate\Support\Carbon|null $deleted_at
      * @property \Illuminate\Support\Carbon|null $updated_at
      * @property \Illuminate\Support\Carbon|null $created_at
-     * @property bool $is_default
+     * @property boolean $is_default
      * @property string $city
      * @property string $district
      * @property string $ward
@@ -28,6 +29,7 @@ namespace App\Models {
      * @method static \Illuminate\Database\Eloquent\Builder<Address>|Address whereIsDefault($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Address>|Address whereCreatedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Address>|Address whereUpdatedAt($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Address>|Address whereDeletedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Address>|Address newModelQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<Address>|Address newQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<Address>|Address query()
@@ -331,6 +333,7 @@ namespace App\Models {
     /**
      * App\Models\Cart
      *
+     * @property \Illuminate\Support\Carbon|null $deleted_at
      * @property \Illuminate\Support\Carbon|null $updated_at
      * @property \Illuminate\Support\Carbon|null $created_at
      * @property int $user_id
@@ -342,6 +345,7 @@ namespace App\Models {
      * @method static \Illuminate\Database\Eloquent\Builder<Cart>|Cart whereUserId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Cart>|Cart whereCreatedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Cart>|Cart whereUpdatedAt($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Cart>|Cart whereDeletedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Cart>|Cart newModelQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<Cart>|Cart newQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<Cart>|Cart query()
@@ -645,6 +649,7 @@ namespace App\Models {
     /**
      * App\Models\CartDetail
      *
+     * @property \Illuminate\Support\Carbon|null $deleted_at
      * @property \Illuminate\Support\Carbon|null $updated_at
      * @property \Illuminate\Support\Carbon|null $created_at
      * @property int $quantity
@@ -658,6 +663,7 @@ namespace App\Models {
      * @method static \Illuminate\Database\Eloquent\Builder<CartDetail>|CartDetail whereQuantity($value)
      * @method static \Illuminate\Database\Eloquent\Builder<CartDetail>|CartDetail whereCreatedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<CartDetail>|CartDetail whereUpdatedAt($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<CartDetail>|CartDetail whereDeletedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<CartDetail>|CartDetail newModelQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<CartDetail>|CartDetail newQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<CartDetail>|CartDetail query()
@@ -961,6 +967,7 @@ namespace App\Models {
     /**
      * App\Models\Category
      *
+     * @property \Illuminate\Support\Carbon|null $deleted_at
      * @property \Illuminate\Support\Carbon|null $updated_at
      * @property \Illuminate\Support\Carbon|null $created_at
      * @property string $slug
@@ -978,6 +985,7 @@ namespace App\Models {
      * @method static \Illuminate\Database\Eloquent\Builder<Category>|Category whereSlug($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Category>|Category whereCreatedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Category>|Category whereUpdatedAt($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Category>|Category whereDeletedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Category>|Category newModelQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<Category>|Category newQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<Category>|Category query()
@@ -1281,6 +1289,7 @@ namespace App\Models {
     /**
      * App\Models\Inventory
      *
+     * @property \Illuminate\Support\Carbon|null $deleted_at
      * @property \Illuminate\Support\Carbon|null $updated_at
      * @property \Illuminate\Support\Carbon|null $created_at
      * @property int $reorder_level
@@ -1299,6 +1308,7 @@ namespace App\Models {
      * @method static \Illuminate\Database\Eloquent\Builder<Inventory>|Inventory whereReorderLevel($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Inventory>|Inventory whereCreatedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Inventory>|Inventory whereUpdatedAt($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Inventory>|Inventory whereDeletedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Inventory>|Inventory newModelQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<Inventory>|Inventory newQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<Inventory>|Inventory query()
@@ -1602,6 +1612,7 @@ namespace App\Models {
     /**
      * App\Models\InventoryTransaction
      *
+     * @property \Illuminate\Support\Carbon|null $deleted_at
      * @property \Illuminate\Support\Carbon|null $updated_at
      * @property \Illuminate\Support\Carbon|null $created_at
      * @property string|null $notes
@@ -1623,6 +1634,7 @@ namespace App\Models {
      * @method static \Illuminate\Database\Eloquent\Builder<InventoryTransaction>|InventoryTransaction whereNotes($value)
      * @method static \Illuminate\Database\Eloquent\Builder<InventoryTransaction>|InventoryTransaction whereCreatedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<InventoryTransaction>|InventoryTransaction whereUpdatedAt($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<InventoryTransaction>|InventoryTransaction whereDeletedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<InventoryTransaction>|InventoryTransaction newModelQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<InventoryTransaction>|InventoryTransaction newQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<InventoryTransaction>|InventoryTransaction query()
@@ -1926,6 +1938,7 @@ namespace App\Models {
     /**
      * App\Models\Payment
      *
+     * @property \Illuminate\Support\Carbon|null $deleted_at
      * @property \Illuminate\Support\Carbon|null $updated_at
      * @property \Illuminate\Support\Carbon|null $created_at
      * @property string|null $transaction_code
@@ -1942,6 +1955,7 @@ namespace App\Models {
      * @method static \Illuminate\Database\Eloquent\Builder<Payment>|Payment whereTransactionCode($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Payment>|Payment whereCreatedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Payment>|Payment whereUpdatedAt($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Payment>|Payment whereDeletedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Payment>|Payment newModelQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<Payment>|Payment newQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<Payment>|Payment query()
@@ -2245,6 +2259,7 @@ namespace App\Models {
     /**
      * App\Models\PaymentMethod
      *
+     * @property string|null $deleted_at
      * @property \Illuminate\Support\Carbon|null $updated_at
      * @property \Illuminate\Support\Carbon|null $created_at
      * @property bool $is_active
@@ -2259,6 +2274,7 @@ namespace App\Models {
      * @method static \Illuminate\Database\Eloquent\Builder<PaymentMethod>|PaymentMethod whereIsActive($value)
      * @method static \Illuminate\Database\Eloquent\Builder<PaymentMethod>|PaymentMethod whereCreatedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<PaymentMethod>|PaymentMethod whereUpdatedAt($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<PaymentMethod>|PaymentMethod whereDeletedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<PaymentMethod>|PaymentMethod newModelQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<PaymentMethod>|PaymentMethod newQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<PaymentMethod>|PaymentMethod query()
@@ -2562,6 +2578,7 @@ namespace App\Models {
     /**
      * App\Models\Product
      *
+     * @property \Illuminate\Support\Carbon|null $deleted_at
      * @property \Illuminate\Support\Carbon|null $updated_at
      * @property \Illuminate\Support\Carbon|null $created_at
      * @property mixed $status
@@ -2588,6 +2605,7 @@ namespace App\Models {
      * @method static \Illuminate\Database\Eloquent\Builder<Product>|Product whereStatus($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Product>|Product whereCreatedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Product>|Product whereUpdatedAt($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Product>|Product whereDeletedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Product>|Product newModelQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<Product>|Product newQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<Product>|Product query()
@@ -2891,10 +2909,11 @@ namespace App\Models {
     /**
      * App\Models\ProductImage
      *
+     * @property \Illuminate\Support\Carbon|null $deleted_at
      * @property \Illuminate\Support\Carbon|null $updated_at
      * @property \Illuminate\Support\Carbon|null $created_at
      * @property int $sort_order
-     * @property bool $is_primary
+     * @property boolean $is_primary
      * @property string $image_url
      * @property int $product_id
      * @property int $id
@@ -2906,6 +2925,7 @@ namespace App\Models {
      * @method static \Illuminate\Database\Eloquent\Builder<ProductImage>|ProductImage whereSortOrder($value)
      * @method static \Illuminate\Database\Eloquent\Builder<ProductImage>|ProductImage whereCreatedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<ProductImage>|ProductImage whereUpdatedAt($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<ProductImage>|ProductImage whereDeletedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<ProductImage>|ProductImage newModelQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<ProductImage>|ProductImage newQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<ProductImage>|ProductImage query()
@@ -3209,10 +3229,11 @@ namespace App\Models {
     /**
      * App\Models\ProductReview
      *
+     * @property \Illuminate\Support\Carbon|null $deleted_at
      * @property \Illuminate\Support\Carbon|null $updated_at
      * @property \Illuminate\Support\Carbon|null $created_at
      * @property string $status
-     * @property bool $is_approved
+     * @property boolean $is_approved
      * @property string|null $comment
      * @property bool $rating
      * @property int $product_id
@@ -3227,6 +3248,7 @@ namespace App\Models {
      * @method static \Illuminate\Database\Eloquent\Builder<ProductReview>|ProductReview whereStatus($value)
      * @method static \Illuminate\Database\Eloquent\Builder<ProductReview>|ProductReview whereCreatedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<ProductReview>|ProductReview whereUpdatedAt($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<ProductReview>|ProductReview whereDeletedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<ProductReview>|ProductReview newModelQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<ProductReview>|ProductReview newQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<ProductReview>|ProductReview query()
@@ -3530,6 +3552,7 @@ namespace App\Models {
     /**
      * App\Models\ProductVariant
      *
+     * @property \Illuminate\Support\Carbon|null $deleted_at
      * @property \Illuminate\Support\Carbon|null $updated_at
      * @property \Illuminate\Support\Carbon|null $created_at
      * @property float|null $original_price
@@ -3555,6 +3578,7 @@ namespace App\Models {
      * @method static \Illuminate\Database\Eloquent\Builder<ProductVariant>|ProductVariant whereOriginalPrice($value)
      * @method static \Illuminate\Database\Eloquent\Builder<ProductVariant>|ProductVariant whereCreatedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<ProductVariant>|ProductVariant whereUpdatedAt($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<ProductVariant>|ProductVariant whereDeletedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<ProductVariant>|ProductVariant newModelQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<ProductVariant>|ProductVariant newQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<ProductVariant>|ProductVariant query()
@@ -3858,6 +3882,7 @@ namespace App\Models {
     /**
      * App\Models\PurchaseOrder
      *
+     * @property \Illuminate\Support\Carbon|null $deleted_at
      * @property \Illuminate\Support\Carbon|null $updated_at
      * @property \Illuminate\Support\Carbon|null $created_at
      * @property float $total_amount
@@ -3891,6 +3916,7 @@ namespace App\Models {
      * @method static \Illuminate\Database\Eloquent\Builder<PurchaseOrder>|PurchaseOrder whereTotalAmount($value)
      * @method static \Illuminate\Database\Eloquent\Builder<PurchaseOrder>|PurchaseOrder whereCreatedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<PurchaseOrder>|PurchaseOrder whereUpdatedAt($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<PurchaseOrder>|PurchaseOrder whereDeletedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<PurchaseOrder>|PurchaseOrder newModelQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<PurchaseOrder>|PurchaseOrder newQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<PurchaseOrder>|PurchaseOrder query()
@@ -4194,6 +4220,7 @@ namespace App\Models {
     /**
      * App\Models\PurchaseOrderDetail
      *
+     * @property \Illuminate\Support\Carbon|null $deleted_at
      * @property \Illuminate\Support\Carbon|null $updated_at
      * @property \Illuminate\Support\Carbon|null $created_at
      * @property float $subtotal
@@ -4210,6 +4237,7 @@ namespace App\Models {
      * @method static \Illuminate\Database\Eloquent\Builder<PurchaseOrderDetail>|PurchaseOrderDetail whereSubtotal($value)
      * @method static \Illuminate\Database\Eloquent\Builder<PurchaseOrderDetail>|PurchaseOrderDetail whereCreatedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<PurchaseOrderDetail>|PurchaseOrderDetail whereUpdatedAt($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<PurchaseOrderDetail>|PurchaseOrderDetail whereDeletedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<PurchaseOrderDetail>|PurchaseOrderDetail newModelQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<PurchaseOrderDetail>|PurchaseOrderDetail newQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<PurchaseOrderDetail>|PurchaseOrderDetail query()
@@ -4513,6 +4541,7 @@ namespace App\Models {
     /**
      * App\Models\Role
      *
+     * @property \Illuminate\Support\Carbon|null $deleted_at
      * @property \Illuminate\Support\Carbon|null $updated_at
      * @property \Illuminate\Support\Carbon|null $created_at
      * @property string|null $description
@@ -4525,6 +4554,7 @@ namespace App\Models {
      * @method static \Illuminate\Database\Eloquent\Builder<Role>|Role whereDescription($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Role>|Role whereCreatedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Role>|Role whereUpdatedAt($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Role>|Role whereDeletedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Role>|Role newModelQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<Role>|Role newQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<Role>|Role query()
@@ -4828,6 +4858,7 @@ namespace App\Models {
     /**
      * App\Models\Shipment
      *
+     * @property \Illuminate\Support\Carbon|null $deleted_at
      * @property \Illuminate\Support\Carbon|null $updated_at
      * @property \Illuminate\Support\Carbon|null $created_at
      * @property mixed $status
@@ -4842,6 +4873,7 @@ namespace App\Models {
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereStatus($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereCreatedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereUpdatedAt($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereDeletedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment newModelQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment newQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment query()
@@ -5145,6 +5177,7 @@ namespace App\Models {
     /**
      * App\Models\ShippingMethod
      *
+     * @property string|null $deleted_at
      * @property \Illuminate\Support\Carbon|null $updated_at
      * @property \Illuminate\Support\Carbon|null $created_at
      * @property bool $is_active
@@ -5159,6 +5192,7 @@ namespace App\Models {
      * @method static \Illuminate\Database\Eloquent\Builder<ShippingMethod>|ShippingMethod whereIsActive($value)
      * @method static \Illuminate\Database\Eloquent\Builder<ShippingMethod>|ShippingMethod whereCreatedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<ShippingMethod>|ShippingMethod whereUpdatedAt($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<ShippingMethod>|ShippingMethod whereDeletedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<ShippingMethod>|ShippingMethod newModelQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<ShippingMethod>|ShippingMethod newQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<ShippingMethod>|ShippingMethod query()
@@ -5462,6 +5496,7 @@ namespace App\Models {
     /**
      * App\Models\Supplier
      *
+     * @property \Illuminate\Support\Carbon|null $deleted_at
      * @property \Illuminate\Support\Carbon|null $updated_at
      * @property \Illuminate\Support\Carbon|null $created_at
      * @property string|null $contact_info
@@ -5474,6 +5509,7 @@ namespace App\Models {
      * @method static \Illuminate\Database\Eloquent\Builder<Supplier>|Supplier whereContactInfo($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Supplier>|Supplier whereCreatedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Supplier>|Supplier whereUpdatedAt($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Supplier>|Supplier whereDeletedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Supplier>|Supplier newModelQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<Supplier>|Supplier newQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<Supplier>|Supplier query()
@@ -5777,8 +5813,10 @@ namespace App\Models {
     /**
      * App\Models\User
      *
+     * @property \Illuminate\Support\Carbon|null $deleted_at
      * @property string $status
      * @property string|null $phone_number
+     * @property int|null $warehouse_id
      * @property int $role_id
      * @property \Illuminate\Support\Carbon|null $updated_at
      * @property \Illuminate\Support\Carbon|null $created_at
@@ -5790,6 +5828,7 @@ namespace App\Models {
      * @property-read mixed $name
      * @property-read mixed $full_name
      * @property-read \App\Models\Role $role
+     * @property-read \App\Models\Warehouse $warehouse
      * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Address> $addresses
      * @property-read int|null $addresses_count
      * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Cart> $carts
@@ -5810,8 +5849,10 @@ namespace App\Models {
      * @method static \Illuminate\Database\Eloquent\Builder<User>|User whereCreatedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<User>|User whereUpdatedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<User>|User whereRoleId($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<User>|User whereWarehouseId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<User>|User wherePhoneNumber($value)
      * @method static \Illuminate\Database\Eloquent\Builder<User>|User whereStatus($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<User>|User whereDeletedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<User>|User newModelQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<User>|User newQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<User>|User query()
@@ -6115,6 +6156,7 @@ namespace App\Models {
     /**
      * App\Models\Warehouse
      *
+     * @property \Illuminate\Support\Carbon|null $deleted_at
      * @property \Illuminate\Support\Carbon|null $updated_at
      * @property \Illuminate\Support\Carbon|null $created_at
      * @property string $location
@@ -6124,11 +6166,14 @@ namespace App\Models {
      * @property-read int|null $inventories_count
      * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\InventoryTransaction> $inventoryTransactions
      * @property-read int|null $inventoryTransactions_count
+     * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\User> $users
+     * @property-read int|null $users_count
      * @method static \Illuminate\Database\Eloquent\Builder<Warehouse>|Warehouse whereId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Warehouse>|Warehouse whereName($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Warehouse>|Warehouse whereLocation($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Warehouse>|Warehouse whereCreatedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Warehouse>|Warehouse whereUpdatedAt($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Warehouse>|Warehouse whereDeletedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Warehouse>|Warehouse newModelQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<Warehouse>|Warehouse newQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<Warehouse>|Warehouse query()

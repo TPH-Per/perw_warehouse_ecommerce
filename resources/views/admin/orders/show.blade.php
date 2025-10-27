@@ -95,7 +95,10 @@
                     <a href="{{ route('admin.orders.index') }}" class="btn btn-secondary">Quay lại Đơn hàng</a>
                     @if(!($order->payment && $order->payment->status === 'completed'))
                     <a href="{{ route('payment.vnpay.create', ['order' => $order->id]) }}" class="btn btn-outline-primary">Thanh toán VNPAY</a>
-                    <a href="{{ route('payment.checkoutvn.create', ['order' => $order->id]) }}" class="btn btn-outline-secondary">Thanh toán Checkout.vn</a>
+                    <form action="{{ route('admin.orders.payment.cod', ['order' => $order->id]) }}" method="POST" style="display: inline-block;">
+                        @csrf
+                        <button type="submit" class="btn btn-outline-success">Thanh toán khi nhận hàng</button>
+                    </form>
                     @if(app()->environment('local'))
                     <a href="{{ route('payment.testqr.show', ['order' => $order->id]) }}" class="btn btn-outline-dark">Test QR (Local)</a>
                     @endif

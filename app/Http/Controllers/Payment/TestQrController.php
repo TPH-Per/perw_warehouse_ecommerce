@@ -39,7 +39,7 @@ class TestQrController extends Controller
             $payment->save();
         }
 
-        return redirect()->route('manager.sales.show', $order->id)
+        return redirect()->route('admin.orders.show', $order->id)
             ->with('success', 'Đã đánh dấu thanh toán thành công (mô phỏng).');
     }
 }

@@ -24,7 +24,7 @@ class ProductAdminController extends AdminController
         $query = Product::with(['category', 'supplier', 'variants']);
 
         // Search functionality
-        if ($request->has('search')) {
+        if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
@@ -33,17 +33,17 @@ class ProductAdminController extends AdminController
         }
 
         // Filter by category
-        if ($request->has('category_id')) {
+        if ($request->filled('category_id')) {
             $query->where('category_id', $request->category_id);
         }
 
         // Filter by supplier
-        if ($request->has('supplier_id')) {
+        if ($request->filled('supplier_id')) {
             $query->where('supplier_id', $request->supplier_id);
         }
 
         // Filter by status
-        if ($request->has('status')) {
+        if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
@@ -222,7 +222,9 @@ class ProductAdminController extends AdminController
             $hasOrderDetails = $product->variants()->whereHas('orderDetails')->exists();
 
             if ($hasOrderDetails) {
-                return $this->errorRedirect('Cannot delete product because it has been ordered. You can archive the product instead.');
+                // Soft delete: update status to archived
+                $product->update(['status' => 'archived']);
+                return $this->successRedirect('admin.products.index', 'Product archived successfully due to existing orders!');
             }
 
             DB::beginTransaction();

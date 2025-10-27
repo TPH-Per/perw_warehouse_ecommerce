@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Auth;
 
 class AdminController extends Controller
 {
@@ -53,6 +54,6 @@ class AdminController extends Controller
      */
     protected function isAdmin(): bool
     {
-        return auth()->check() && auth()->user()->role->name === 'Admin';
+        return Auth::check() && Auth::user()->role->name === 'Admin';
     }
 }

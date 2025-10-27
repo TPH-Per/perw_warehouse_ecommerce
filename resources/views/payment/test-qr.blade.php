@@ -8,7 +8,7 @@
         <h1><i class="bi bi-qr-code"></i> Test QR thanh toán (Local)</h1>
         <p class="text-muted mb-0">Đơn hàng {{ $order->order_code }} — Tổng: ₫{{ number_format($order->total_amount, 0, ',', '.') }}</p>
     </div>
-    <a href="{{ route('manager.sales.show', $order->id) }}" class="btn btn-secondary">
+    <a href="{{ route('admin.orders.show', $order->id) }}" class="btn btn-secondary">
         <i class="bi bi-arrow-left"></i> Quay lại đơn hàng
     </a>
     </div>

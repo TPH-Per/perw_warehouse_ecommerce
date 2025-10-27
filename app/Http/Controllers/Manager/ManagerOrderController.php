@@ -79,6 +79,11 @@ class ManagerOrderController extends Controller
                     'status' => 'delivered',
                     'delivered_at' => now()
                 ]);
+
+                // If order is delivered, mark payment as completed
+                if ($order->payment && $order->payment->status !== 'completed') {
+                    $order->payment->update(['status' => 'completed']);
+                }
             }
 
             return redirect()->route('manager.orders.show', $order->id)

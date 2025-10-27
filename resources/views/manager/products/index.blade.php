@@ -22,8 +22,9 @@
                 <label class="form-label">Trạng thái</label>
                 <select class="form-select" name="status">
                     <option value="">Tất cả trạng thái</option>
-                    <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>Hoạt động</option>
-                    <option value="inactive" {{ request('status') == 'inactive' ? 'selected' : '' }}>Không hoạt động</option>
+                    <option value="published" {{ request('status') == 'published' ? 'selected' : '' }}>Đã xuất bản</option>
+                    <option value="draft" {{ request('status') == 'draft' ? 'selected' : '' }}>Bản nháp</option>
+                    <option value="archived" {{ request('status') == 'archived' ? 'selected' : '' }}>Đã lưu trữ</option>
                 </select>
             </div>
             <div class="col-md-3 d-flex align-items-end gap-2">
@@ -88,10 +89,14 @@
                             @endif
                         </td>
                         <td>
-                            @if($product->status == 'active')
-                                <span class="badge bg-success">Hoạt động</span>
+                            @if($product->status == 'published')
+                                <span class="badge bg-success">Đã xuất bản</span>
+                            @elseif($product->status == 'draft')
+                                <span class="badge bg-secondary">Bản nháp</span>
+                            @elseif($product->status == 'archived')
+                                <span class="badge bg-danger">Đã lưu trữ</span>
                             @else
-                                <span class="badge bg-secondary">Không hoạt động</span>
+                                <span class="badge bg-secondary">{{ ucfirst($product->status) }}</span>
                             @endif
                         </td>
                         <td>

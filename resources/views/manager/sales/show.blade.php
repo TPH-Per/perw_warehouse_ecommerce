@@ -165,9 +165,6 @@
                 <a href="{{ route('payment.vnpay.create', ['order' => $order->id]) }}" class="btn btn-primary w-100">
                     <i class="bi bi-credit-card"></i> Thanh toán VNPAY
                 </a>
-                <a href="{{ route('payment.checkoutvn.create', ['order' => $order->id]) }}" class="btn btn-outline-primary w-100 mt-2">
-                    <i class="bi bi-credit-card"></i> Thanh toán Checkout.vn
-                </a>
                 @if(app()->environment('local'))
                 <a href="{{ route('payment.testqr.show', ['order' => $order->id]) }}" class="btn btn-outline-secondary w-100 mt-2">
                     <i class="bi bi-qr-code"></i> Test QR (Local)

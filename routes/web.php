@@ -7,7 +7,6 @@ use App\Http\Controllers\Admin\UserAdminController;
 use App\Http\Controllers\Admin\OrderAdminController;
 use App\Http\Controllers\Admin\InventoryAdminController;
 use App\Http\Controllers\Payment\VnpayController;
-use App\Http\Controllers\Payment\CheckoutVNController;
 use App\Http\Controllers\Payment\TestQrController;
 use App\Http\Controllers\AuthController;
 use Illuminate\Support\Facades\Route;
@@ -46,12 +45,7 @@ Route::prefix('payment/vnpay')->name('payment.vnpay.')->group(function () {
     Route::match(['get', 'post'], '/ipn', [VnpayController::class, 'ipn'])->name('ipn');
 });
 
-// Checkout.vn Payment Routes
-Route::prefix('payment/checkoutvn')->name('payment.checkoutvn.')->group(function () {
-    Route::get('/create/{order}', [CheckoutVNController::class, 'create'])->middleware('auth')->name('create');
-    Route::get('/return', [CheckoutVNController::class, 'return'])->name('return');
-    Route::match(['get', 'post'], '/ipn', [CheckoutVNController::class, 'ipn'])->name('ipn');
-});
+// Checkout.vn Payment Routes (Removed)
 
 // Local-only Test QR payment routes
 if (app()->environment('local')) {
@@ -172,6 +166,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::resource('orders', OrderAdminController::class);
     Route::put('/orders/{order}/status', [OrderAdminController::class, 'updateStatus'])->name('orders.status.update');
     Route::post('/orders/{order}/payment', [OrderAdminController::class, 'processPayment'])->name('orders.payment.process');
+    Route::post('/orders/{order}/payment/cod', [App\Http\Controllers\Payment\CashOnDeliveryController::class, 'process'])->name('orders.payment.cod');
     Route::post('/orders/{order}/shipment', [OrderAdminController::class, 'createShipment'])->name('orders.shipment.create');
     Route::post('/orders/{order}/cancel', [OrderAdminController::class, 'cancelOrder'])->name('orders.cancel');
     Route::get('/orders/statistics', [OrderAdminController::class, 'statistics'])->name('orders.statistics');

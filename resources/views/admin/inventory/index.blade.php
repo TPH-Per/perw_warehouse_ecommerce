@@ -182,12 +182,12 @@
                     @foreach($inventories as $inventory)
                     <tr class="{{ $inventory->quantity_on_hand == 0 ? 'table-danger' : ($inventory->quantity_on_hand <= $inventory->reorder_level ? 'table-warning' : '') }}">
                         <td>
-                            <strong>{{ $inventory->productVariant->product->name }}</strong>
+                            <strong>{{ $inventory->productVariant?->product?->name ?? 'N/A' }}</strong>
                         </td>
                         <td>
-                            {{ $inventory->productVariant->variant_name }}
+                            {{ $inventory->productVariant?->variant_name ?? 'N/A' }}
                             <br>
-                            <small class="text-muted">{{ $inventory->productVariant->sku }}</small>
+                            <small class="text-muted">{{ $inventory->productVariant?->sku ?? 'N/A' }}</small>
                         </td>
                         <td>{{ $inventory->warehouse->name }}</td>
                         <td>
