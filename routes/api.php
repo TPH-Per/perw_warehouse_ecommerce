@@ -7,6 +7,8 @@ use App\Http\Controllers\Api\AuthApiController;
 use App\Http\Controllers\Api\CartApiController;
 use App\Http\Controllers\Api\OrderApiController;
 use App\Http\Controllers\Api\ProfileApiController;
+use App\Http\Controllers\Api\CategoryApiController;
+use App\Http\Controllers\Api\UtilityApiController;
 
 /*
 |--------------------------------------------------------------------------
@@ -30,6 +32,13 @@ Route::apiResource('products', ProductController::class)->only(['index', 'show']
 Route::get('/products/slug/{slug}', [ProductController::class, 'showBySlug']);
 Route::get('/products/featured', [ProductController::class, 'featured']);
 Route::get('/products/search', [ProductController::class, 'search']);
+
+// Public utility routes
+Route::get('/orders/track/{orderCode}', [OrderApiController::class, 'track']);
+Route::get('/categories', [CategoryApiController::class, 'index']);
+Route::get('/categories/{id}/products', [CategoryApiController::class, 'products']);
+Route::get('/payment-methods', [UtilityApiController::class, 'paymentMethods']);
+Route::get('/shipping-methods', [UtilityApiController::class, 'shippingMethods']);
 
 // Protected customer routes
 Route::middleware('auth:sanctum')->group(function () {
@@ -56,8 +65,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/{id}/cancel', [OrderApiController::class, 'cancel']);
     });
 
-    // Public order tracking
-    Route::get('/orders/track/{orderCode}', [OrderApiController::class, 'track']);
+    // (moved) Public order tracking is now outside auth
 
     // Profile routes
     Route::prefix('profile')->group(function () {

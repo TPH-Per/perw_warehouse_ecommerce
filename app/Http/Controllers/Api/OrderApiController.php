@@ -79,7 +79,7 @@ class OrderApiController extends Controller
         // Get cart
         $cart = Cart::where('user_id', $user->id)->firstOrFail();
         $cartDetails = CartDetail::where('cart_id', $cart->id)
-            ->with('variant')
+            ->with(['variant.inventories'])
             ->get();
 
         if ($cartDetails->isEmpty()) {
@@ -94,8 +94,11 @@ class OrderApiController extends Controller
         try {
             // Check stock availability for all items
             foreach ($cartDetails as $detail) {
-                if ($detail->variant->stock_quantity < $detail->quantity) {
-                    throw new \Exception("Insufficient stock for {$detail->variant->sku}");
+                $available = $detail->variant->inventories->sum(function ($inv) {
+                    return max(0, ($inv->quantity_on_hand ?? 0) - ($inv->quantity_reserved ?? 0));
+                });
+                if ($available < $detail->quantity) {
+                    throw new \Exception("Insufficient stock for {$detail->variant->sku}. Available: {$available}, Requested: {$detail->quantity}");
                 }
             }
 
@@ -131,17 +134,20 @@ class OrderApiController extends Controller
                     'order_id' => $order->id,
                     'product_variant_id' => $detail->product_variant_id,
                     'quantity' => $detail->quantity,
-                    'unit_price' => $detail->price,
+                    'price_at_purchase' => $detail->price,
                     'subtotal' => $detail->price * $detail->quantity,
                 ]);
 
-                // Update variant stock
-                $variant = $detail->variant;
-                $variant->stock_quantity -= $detail->quantity;
-                $variant->save();
-
-                // Create inventory transaction (if inventory tracking is enabled)
-                // You can add inventory transaction logic here
+                // Reserve/decrement inventory from first available records
+                foreach ($detail->variant->inventories as $inv) {
+                    $available = max(0, ($inv->quantity_on_hand ?? 0) - ($inv->quantity_reserved ?? 0));
+                    if ($available <= 0) continue;
+                    $use = min($available, $detail->quantity);
+                    $inv->quantity_on_hand = ($inv->quantity_on_hand ?? 0) - $use;
+                    $inv->save();
+                    $detail->quantity -= $use;
+                    if ($detail->quantity <= 0) break;
+                }
             }
 
             // Create payment record
@@ -203,20 +209,28 @@ class OrderApiController extends Controller
         DB::beginTransaction();
 
         try {
-            // Restore stock
+            // Restore inventory back to variant inventories
             foreach ($order->orderDetails as $detail) {
-                $variant = $detail->variant;
-                $variant->stock_quantity += $detail->quantity;
-                $variant->save();
+                $variant = $detail->variant()->with('inventories')->first();
+                if (!$variant) continue;
+                $qty = $detail->quantity;
+                // Put back into the first inventory record(s)
+                foreach ($variant->inventories as $inv) {
+                    $inv->quantity_on_hand = ($inv->quantity_on_hand ?? 0) + $qty;
+                    $inv->save();
+                    // all restored in first inventory for simplicity
+                    break;
+                }
             }
 
             // Update order status
             $order->status = 'cancelled';
             $order->save();
 
-            // Update payment status
+            // Update payment status (use allowed enum values)
             if ($order->payment) {
-                $order->payment->status = 'cancelled';
+                // If an order is cancelled, consider payment "refunded"
+                $order->payment->status = 'refunded';
                 $order->payment->save();
             }
 

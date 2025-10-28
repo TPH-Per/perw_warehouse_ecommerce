@@ -18,10 +18,15 @@ class ProductImageFactory extends Factory
      */
     public function definition(): array
     {
+        $placeholders = [];
+        for ($i = 1; $i <= 12; $i++) {
+            $placeholders[] = "/images/products/product-{$i}.svg";
+        }
+
         return [
             'product_id' => Product::factory(),
-            'image_url' => $this->faker->imageUrl(640, 480, 'products'),
-            'is_primary' => $this->faker->boolean(30), // 30% chance of being primary
+            'image_url' => $this->faker->randomElement($placeholders),
+            'is_primary' => $this->faker->boolean(50),
             'sort_order' => $this->faker->numberBetween(0, 10),
         ];
     }

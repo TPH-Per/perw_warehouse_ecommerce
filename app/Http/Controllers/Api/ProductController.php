@@ -13,8 +13,8 @@ class ProductController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Product::with(['category', 'supplier', 'variants', 'images'])
-            ->where('status', 'active');
+        $query = Product::with(['category', 'supplier', 'variants.inventories', 'images'])
+            ->whereIn('status', ['active', 'published']);
 
         // Filter by category
         if ($request->has('category_id')) {
@@ -92,8 +92,8 @@ class ProductController extends Controller
      */
     public function featured()
     {
-        $products = Product::with(['category', 'supplier', 'variants', 'images'])
-            ->where('status', 'active')
+        $products = Product::with(['category', 'supplier', 'variants.inventories', 'images'])
+            ->whereIn('status', ['active', 'published'])
             ->inRandomOrder()
             ->limit(8)
             ->get();
@@ -108,8 +108,8 @@ class ProductController extends Controller
     {
         $query = $request->input('q', '');
 
-        $products = Product::with(['category', 'supplier', 'variants', 'images'])
-            ->where('status', 'active')
+        $products = Product::with(['category', 'supplier', 'variants.inventories', 'images'])
+            ->whereIn('status', ['active', 'published'])
             ->where(function ($q) use ($query) {
                 $q->where('name', 'like', '%' . $query . '%')
                     ->orWhere('description', 'like', '%' . $query . '%');

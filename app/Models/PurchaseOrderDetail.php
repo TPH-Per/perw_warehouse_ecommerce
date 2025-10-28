@@ -47,4 +47,12 @@ class PurchaseOrderDetail extends Model
     {
         return $this->belongsTo(ProductVariant::class, 'product_variant_id');
     }
+
+    /**
+     * Alias for productVariant relationship to keep consistency with other parts of code.
+     */
+    public function variant(): BelongsTo
+    {
+        return $this->belongsTo(ProductVariant::class, 'product_variant_id');
+    }
 }

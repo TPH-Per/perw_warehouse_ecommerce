@@ -24,12 +24,11 @@ class AuthApiController extends Controller
             'phone_number' => 'nullable|string|max:20',
         ]);
 
-        // Get customer role
-        $customerRole = Role::where('name', 'Customer')->first();
-
+        // Get customer role (fallback to End User)
+        $customerRole = Role::whereIn('name', ['Customer', 'End User'])->orderByRaw("FIELD(name, 'Customer', 'End User')")->first();
         if (!$customerRole) {
             return response()->json([
-                'message' => 'Customer role not found. Please contact administrator.'
+                'message' => 'Customer/End User role not found. Please seed roles.'
             ], 500);
         }
 
@@ -37,7 +36,7 @@ class AuthApiController extends Controller
             'name' => $validated['name'],
             'full_name' => $validated['name'],
             'email' => $validated['email'],
-            'password' => $validated['password'],
+            'password' => Hash::make($validated['password']),
             'phone_number' => $validated['phone_number'] ?? null,
             'role_id' => $customerRole->id,
             'status' => 'active',
@@ -78,8 +77,8 @@ class AuthApiController extends Controller
             ]);
         }
 
-        // Check if user is a customer
-        if ($user->role && $user->role->name !== 'Customer') {
+        // Check if user is allowed (Customer or End User)
+        if ($user->role && !in_array($user->role->name, ['Customer', 'End User'])) {
             return response()->json([
                 'message' => 'Access denied. Customer accounts only.'
             ], 403);

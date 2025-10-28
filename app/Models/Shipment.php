@@ -10,6 +10,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Shipment extends Model
 {
     use HasFactory, SoftDeletes;
+    protected $primaryKey = 'order_id';
+    public $incrementing = false;
+    protected $keyType = 'int';
     /**
      * The attributes that are mass assignable.
      *

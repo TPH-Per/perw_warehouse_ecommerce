@@ -11,6 +11,12 @@ class Payment extends Model
 {
     use HasFactory, SoftDeletes;
     /**
+     * Primary key is order_id (not an auto-increment id)
+     */
+    protected $primaryKey = 'order_id';
+    public $incrementing = false;
+    protected $keyType = 'int';
+    /**
      * The attributes that are mass assignable.
      *
      * @var array

@@ -79,12 +79,17 @@ class CartApiController extends Controller
         ]);
 
         $user = $request->user();
-        $variant = ProductVariant::findOrFail($validated['product_variant_id']);
+        $variant = ProductVariant::with('inventories')->findOrFail($validated['product_variant_id']);
 
-        // Check stock availability
-        if ($variant->stock_quantity < $validated['quantity']) {
+        // Compute available stock from inventories
+        $available = $variant->inventories->sum(function ($inv) {
+            return max(0, ($inv->quantity_on_hand ?? 0) - ($inv->quantity_reserved ?? 0));
+        });
+
+        if ($available < $validated['quantity']) {
             return response()->json([
-                'message' => 'Insufficient stock available'
+                'message' => 'Insufficient stock available',
+                'available' => $available
             ], 400);
         }
 
@@ -100,9 +105,10 @@ class CartApiController extends Controller
             // Update quantity
             $newQuantity = $cartDetail->quantity + $validated['quantity'];
 
-            if ($variant->stock_quantity < $newQuantity) {
+            if ($available < $newQuantity) {
                 return response()->json([
-                    'message' => 'Insufficient stock available'
+                    'message' => 'Insufficient stock available',
+                    'available' => $available
                 ], 400);
             }
 
@@ -143,11 +149,15 @@ class CartApiController extends Controller
             $cartDetail->delete();
         } else {
             // Check stock availability
-            $variant = ProductVariant::findOrFail($cartDetail->product_variant_id);
+            $variant = ProductVariant::with('inventories')->findOrFail($cartDetail->product_variant_id);
+            $available = $variant->inventories->sum(function ($inv) {
+                return max(0, ($inv->quantity_on_hand ?? 0) - ($inv->quantity_reserved ?? 0));
+            });
 
-            if ($variant->stock_quantity < $validated['quantity']) {
+            if ($available < $validated['quantity']) {
                 return response()->json([
-                    'message' => 'Insufficient stock available'
+                    'message' => 'Insufficient stock available',
+                    'available' => $available
                 ], 400);
             }
 
