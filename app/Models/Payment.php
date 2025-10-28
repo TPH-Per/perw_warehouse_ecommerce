@@ -10,14 +10,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Payment extends Model
 {
     use HasFactory, SoftDeletes;
-
-    /**
-     * The primary key associated with the table.
-     * Payments table uses order_id as the primary key.
-     */
-    protected $primaryKey = 'order_id';
-    public $incrementing = false;
-    protected $keyType = 'int';
     /**
      * Primary key is order_id (not an auto-increment id)
      */
