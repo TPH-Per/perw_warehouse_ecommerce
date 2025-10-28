@@ -6,6 +6,8 @@ use App\Http\Controllers\Admin\ProductAdminController;
 use App\Http\Controllers\Admin\UserAdminController;
 use App\Http\Controllers\Admin\OrderAdminController;
 use App\Http\Controllers\Admin\InventoryAdminController;
+use App\Http\Controllers\Payment\VnpayController;
+use App\Http\Controllers\Payment\TestQrController;
 use App\Http\Controllers\AuthController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\EndUser\HomeController as EndUserHomeController;
@@ -64,6 +66,28 @@ Route::middleware([EnsureEndUserAuthenticated::class])->group(function () {
     Route::post('/orders/{id}/cancel', [EndUserOrderController::class, 'cancel'])->name('enduser.order.cancel');
 });
 
+// VNPAY Payment Routes
+Route::prefix('payment/vnpay')->name('payment.vnpay.')->group(function () {
+    // Create payment and redirect (protected)
+    Route::get('/create/{order}', [VnpayController::class, 'create'])->middleware('auth')->name('create');
+
+    // Return URL (public)
+    Route::get('/return', [VnpayController::class, 'return'])->name('return');
+
+    // IPN (public, GET/POST depending on VNPAY config)
+    Route::match(['get', 'post'], '/ipn', [VnpayController::class, 'ipn'])->name('ipn');
+});
+
+// Checkout.vn Payment Routes (Removed)
+
+// Local-only Test QR payment routes
+if (app()->environment('local')) {
+    Route::prefix('payment/test-qr')->name('payment.testqr.')->group(function () {
+        Route::get('/{order}', [TestQrController::class, 'show'])->middleware('auth')->name('show');
+        Route::post('/simulate/{order}', [TestQrController::class, 'simulate'])->middleware('auth')->name('simulate');
+    });
+}
+
 // Test pagination route
 Route::get('/test-pagination', function () {
     return view('test-pagination');
@@ -108,16 +132,22 @@ Route::get('/test-user-filter', function () {
 // Inventory Manager Routes (Protected by authentication and manager role)
 Route::middleware(['auth', 'manager'])->prefix('manager')->name('manager.')->group(function () {
     // Dashboard
-    Route::get('/dashboard', [App\Http\Controllers\Manager\ManagerDashboardController::class, 'index'])->name('dashboard');
+        Route::get('/dashboard', [App\Http\Controllers\Manager\ManagerDashboardController::class, 'index'])->name('dashboard');
 
     // Inventory Management (Read/Update only, NO create/delete products)
     Route::prefix('inventory')->name('inventory.')->group(function () {
         Route::get('/', [InventoryAdminController::class, 'index'])->name('index');
+        Route::get('/variants/search', [InventoryAdminController::class, 'searchVariants'])->name('variants.search');
+        Route::post('/inbound', [InventoryAdminController::class, 'inbound'])->name('inbound');
         Route::get('/low-stock', [InventoryAdminController::class, 'lowStock'])->name('low-stock');
         Route::get('/transactions', [InventoryAdminController::class, 'transactions'])->name('transactions');
         Route::get('/{inventory}', [InventoryAdminController::class, 'show'])->name('show');
+        Route::get('/{inventory}/edit', [InventoryAdminController::class, 'edit'])->name('edit');
         Route::post('/{inventory}/adjust', [InventoryAdminController::class, 'adjust'])->name('adjust');
         Route::post('/transfer', [InventoryAdminController::class, 'transfer'])->name('transfer');
+        Route::post('/', [InventoryAdminController::class, 'store'])->name('store');
+        Route::put('/{inventory}', [InventoryAdminController::class, 'update'])->name('update');
+        Route::delete('/{inventory}', [InventoryAdminController::class, 'destroy'])->name('destroy');
     });
 
     // Direct Sales (No shipping)
@@ -150,6 +180,8 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
 
     // Product Management
     Route::resource('products', ProductAdminController::class);
+    Route::post('/products/categories', [ProductAdminController::class, 'storeCategory'])->name('products.categories.store');
+    Route::post('/products/suppliers', [ProductAdminController::class, 'storeSupplier'])->name('products.suppliers.store');
     Route::post('/products/{product}/variants', [ProductAdminController::class, 'addVariant'])->name('products.variants.store');
     Route::post('/products/{product}/images', [ProductAdminController::class, 'uploadImages'])->name('products.images.store');
     Route::delete('/product-images/{image}', [ProductAdminController::class, 'deleteImage'])->name('products.images.destroy');
@@ -167,6 +199,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::resource('orders', OrderAdminController::class);
     Route::put('/orders/{order}/status', [OrderAdminController::class, 'updateStatus'])->name('orders.status.update');
     Route::post('/orders/{order}/payment', [OrderAdminController::class, 'processPayment'])->name('orders.payment.process');
+    Route::post('/orders/{order}/payment/cod', [App\Http\Controllers\Payment\CashOnDeliveryController::class, 'process'])->name('orders.payment.cod');
     Route::post('/orders/{order}/shipment', [OrderAdminController::class, 'createShipment'])->name('orders.shipment.create');
     Route::post('/orders/{order}/cancel', [OrderAdminController::class, 'cancelOrder'])->name('orders.cancel');
     Route::get('/orders/statistics', [OrderAdminController::class, 'statistics'])->name('orders.statistics');
@@ -181,6 +214,11 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         Route::get('/statistics', [InventoryAdminController::class, 'statistics'])->name('statistics');
         Route::get('/transactions', [InventoryAdminController::class, 'transactions'])->name('transactions');
         Route::get('/export', [InventoryAdminController::class, 'export'])->name('export');
+        // Warehouses
+        Route::post('/warehouses', [InventoryAdminController::class, 'storeWarehouse'])->name('warehouses.store');
+
+        Route::get('/variants/search', [InventoryAdminController::class, 'searchVariants'])->name('variants.search');
+        Route::post('/inbound', [InventoryAdminController::class, 'inbound'])->name('inbound');
 
         Route::post('/', [InventoryAdminController::class, 'store'])->name('store');
         Route::get('/{inventory}', [InventoryAdminController::class, 'show'])->name('show');

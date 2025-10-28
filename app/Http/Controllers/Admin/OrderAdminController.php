@@ -38,11 +38,11 @@ class OrderAdminController extends AdminController
         }
 
         // Filter by date range
-        if ($request->has('date_from')) {
+        if ($request->filled('date_from')) {
             $query->whereDate('created_at', '>=', $request->date_from);
         }
 
-        if ($request->has('date_to')) {
+        if ($request->filled('date_to')) {
             $query->whereDate('created_at', '<=', $request->date_to);
         }
 
@@ -88,6 +88,11 @@ class OrderAdminController extends AdminController
             // If order is cancelled, refund payment if applicable
             if ($request->status === 'cancelled' && $order->payment && $order->payment->status === 'completed') {
                 $order->payment->update(['status' => 'refunded']);
+            }
+
+            // If order is delivered, mark payment as completed
+            if ($request->status === 'delivered' && $order->payment && $order->payment->status !== 'completed') {
+                $order->payment->update(['status' => 'completed']);
             }
 
             return redirect()->route('admin.orders.index')->with('success', 'Order status updated successfully!');
@@ -196,6 +201,11 @@ class OrderAdminController extends AdminController
             if ($request->status === 'delivered') {
                 $shipment->update(['delivered_at' => now()]);
                 $shipment->order->update(['status' => 'delivered']);
+
+                // Mark payment as completed for cash on delivery
+                if ($shipment->order->payment && $shipment->order->payment->status !== 'completed') {
+                    $shipment->order->payment->update(['status' => 'completed']);
+                }
             }
 
             DB::commit();
@@ -345,7 +355,15 @@ class OrderAdminController extends AdminController
         }
 
         try {
+            // Update order statuses
             PurchaseOrder::whereIn('id', $request->order_ids)->update(['status' => $request->status]);
+
+            // If orders are marked as delivered, also mark payments as completed
+            if ($request->status === 'delivered') {
+                Payment::whereIn('order_id', $request->order_ids)
+                    ->where('status', '!=', 'completed')
+                    ->update(['status' => 'completed']);
+            }
 
             return $this->successResponse('Orders status updated successfully!');
         } catch (\Exception $e) {

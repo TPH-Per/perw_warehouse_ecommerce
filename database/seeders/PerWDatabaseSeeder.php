@@ -11,6 +11,7 @@ use App\Models\Role;
 use App\Models\Supplier;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Models\PaymentMethod;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -65,6 +66,22 @@ class PerWDatabaseSeeder extends Seeder
             'name' => 'Apparel',
             'slug' => 'apparel'
         ]);
+
+        // Ensure payment methods (including Online and VNPAY) exist
+        PaymentMethod::firstOrCreate(
+            ['code' => 'online'],
+            ['name' => 'Thanh toán trực tuyến', 'is_active' => true]
+        );
+        PaymentMethod::firstOrCreate(
+            ['code' => 'vnpay'],
+            ['name' => 'VNPAY', 'is_active' => true]
+        );
+        // Checkout.vn payment method (Removed)
+
+        PaymentMethod::firstOrCreate(
+            ['code' => 'cod'],
+            ['name' => 'Thanh toán khi nhận hàng', 'is_active' => true]
+        );
 
         // Create suppliers
         $goodSmile = Supplier::factory()->create([

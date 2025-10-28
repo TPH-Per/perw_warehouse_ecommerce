@@ -13,6 +13,58 @@
     </a>
 </div>
 
+<!-- Quick Add Category -->
+<div class="card mb-4">
+    <div class="card-header">
+        <i class="bi bi-tags"></i> Thêm danh mục sản phẩm
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ route('admin.products.categories.store') }}" class="row g-3">
+            @csrf
+            <div class="col-md-6">
+                <label class="form-label">Tên danh mục *</label>
+                <input type="text" name="name" class="form-control @error('name') is-invalid @enderror" placeholder="VD: Figure, Nendoroid..." value="{{ old('name') }}" required>
+                @error('name')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-success w-100">
+                    <i class="bi bi-plus-circle"></i> Thêm danh mục
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Quick Add Supplier -->
+<div class="card mb-4">
+    <div class="card-header">
+        <i class="bi bi-truck"></i> Thêm nhà cung cấp
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ route('admin.products.suppliers.store') }}" class="row g-3">
+            @csrf
+            <div class="col-md-5">
+                <label class="form-label">Tên nhà cung cấp *</label>
+                <input type="text" name="name" class="form-control @error('name') is-invalid @enderror" placeholder="VD: Good Smile Company" value="{{ old('name') }}" required>
+                @error('name')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
+            </div>
+            <div class="col-md-5">
+                <label class="form-label">Thông tin liên hệ (tuỳ chọn)</label>
+                <input type="text" name="contact_info" class="form-control" placeholder="Email/SĐT/Địa chỉ" value="{{ old('contact_info') }}">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-success w-100">
+                    <i class="bi bi-plus-circle"></i> Thêm NCC
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- Filters -->
 <div class="card mb-4">
     <div class="card-body">

@@ -142,7 +142,7 @@
         <!-- Adjust Inventory -->
         <div class="card mb-3">
             <div class="card-header bg-warning text-white">
-                <i class="bi bi-sliders"></i> Điều chỉnh Kho hàng
+                <i class="bi bi-arrow-repeat"></i> Xuất Nhập Kho
             </div>
             <div class="card-body">
                 <form method="POST" action="{{ route('manager.inventory.adjust', $inventory->id) }}">
@@ -168,11 +168,39 @@
                         <textarea class="form-control" name="notes" rows="2"></textarea>
                     </div>
                     <button type="submit" class="btn btn-warning w-100">
-                        <i class="bi bi-check-circle"></i> Điều chỉnh
+                        <i class="bi bi-check-circle"></i> Thực hiện
                     </button>
                 </form>
             </div>
         </div>
+
+        <!-- Edit Inventory Button -->
+        <div class="card mt-3">
+            <div class="card-body text-center">
+                <a href="{{ route('manager.inventory.edit', $inventory->id) }}" class="btn btn-primary w-100">
+                    <i class="bi bi-pencil"></i> Chỉnh sửa thông tin tồn kho
+                </a>
+            </div>
+        </div>
+
+        <!-- Delete Inventory (Only for inventory managers of this warehouse) -->
+        @if($isWarehouseSpecificManager && $inventory->warehouse_id == $user->warehouse_id)
+        <div class="card mt-3">
+            <div class="card-header bg-danger text-white">
+                <i class="bi bi-trash"></i> Xóa bản ghi tồn kho
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Chỉ xóa bản ghi tồn kho nếu không có giao dịch nào tồn tại.</p>
+                <form method="POST" action="{{ route('manager.inventory.destroy', $inventory->id) }}" onsubmit="return confirm('Bạn có chắc chắn muốn xóa bản ghi tồn kho này? Hành động này không thể hoàn tác.')">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="btn btn-danger w-100">
+                        <i class="bi bi-trash"></i> Xóa bản ghi tồn kho
+                    </button>
+                </form>
+            </div>
+        </div>
+        @endif
 
         <!-- Transfer Inventory (Only for admins) -->
         @if(!$isWarehouseSpecificManager)

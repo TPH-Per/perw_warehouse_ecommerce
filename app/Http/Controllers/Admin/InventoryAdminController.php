@@ -6,18 +6,130 @@ use App\Models\Inventory;
 use App\Models\InventoryTransaction;
 use App\Models\ProductVariant;
 use App\Models\Warehouse;
-use App\Models\PurchaseOrder;
+use App\Services\InventoryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Validation\Rule;
 
 class InventoryAdminController extends AdminController
 {
+    public function __construct(private InventoryService $inventoryService)
+    {
+    }
+
     /**
-     * Display a listing of inventories
+     * Record an inbound receipt for one or many items.
      */
+    public function inbound(Request $request)
+    {
+        $request->validate([
+            'warehouse_id' => 'required|exists:warehouses,id',
+            'items' => 'required|array|min:1',
+            'items.*.product_variant_id' => 'nullable|exists:product_variants,id',
+            'items.*.sku' => 'nullable|string',
+            'items.*.quantity' => 'required|integer|min:1',
+            'items.*.notes' => 'nullable|string|max:500',
+        ], [
+            'items.required' => 'Phiếu nhập phải có ít nhất 1 sản phẩm.',
+        ]);
+
+        $user = Auth::user();
+        if ($user && $user->role->name === 'Inventory Manager' && (int) $user->warehouse_id !== (int) $request->warehouse_id) {
+            return back()->with('error', 'Bạn không có quyền nhập kho khác.');
+        }
+
+        $items = collect($request->input('items'))
+            ->map(function (array $item) {
+                $variantId = $item['product_variant_id'] ?? null;
+                $sku = $item['sku'] ?? null;
+
+                if (!$variantId && !$sku) {
+                    throw ValidationException::withMessages([
+                        'items' => 'Mỗi dòng phải chọn sản phẩm hoặc nhập SKU.',
+                    ]);
+                }
+
+                return [
+                    'variant_id' => $variantId,
+                    'sku' => $sku,
+                    'quantity' => (int) $item['quantity'],
+                    'notes' => $item['notes'] ?? null,
+                ];
+            })
+            ->all();
+
+        $rawResults = $this->inventoryService->inboundBatch(
+            (int) $request->warehouse_id,
+            $items,
+            $request->input('notes')
+        );
+
+        $variantMap = ProductVariant::query()
+            ->with('product')
+            ->whereIn('id', collect($rawResults)->pluck('transaction.product_variant_id')->unique())
+            ->get()
+            ->keyBy('id');
+
+        $results = collect($rawResults)->map(function (array $result) use ($variantMap) {
+            $variantId = $result['transaction']['product_variant_id'];
+            $variant = $variantMap->get($variantId);
+
+            $result['variant'] = $variant ? [
+                'id' => $variant->id,
+                'sku' => $variant->sku,
+                'name' => $variant->name,
+                'product_name' => $variant->product->name ?? '',
+                'full_label' => trim(($variant->product->name ?? '') . ($variant->name ? " ({$variant->name})" : '')),
+            ] : null;
+
+            return $result;
+        })->toArray();
+
+        return back()
+            ->with('success', 'Đã ghi nhận phiếu nhập.')
+            ->with('inbound_result', $results);
+    }
+
+    /**
+     * Search product variants for the inbound autocomplete.
+     */
+    public function searchVariants(Request $request)
+    {
+        $term = trim((string) $request->input('q', ''));
+
+        $variants = ProductVariant::query()
+            ->with('product')
+            ->when($term !== '', function ($query) use ($term) {
+                $query->where(function ($search) use ($term) {
+                    $search->where('name', 'like', "%{$term}%")
+                        ->orWhere('sku', 'like', "%{$term}%")
+                        ->orWhereHas('product', function ($subQuery) use ($term) {
+                            $subQuery->where('name', 'like', "%{$term}%");
+                        });
+                });
+            })
+            ->limit(20)
+            ->get()
+            ->map(function (ProductVariant $variant) {
+                $productName = $variant->product->name ?? '';
+                $variantName = $variant->name ? " ({$variant->name})" : '';
+
+                return [
+                    'id' => $variant->id,
+                    'sku' => $variant->sku,
+                    'label' => trim("{$productName}{$variantName}") ?: $variant->sku,
+                    'product_name' => $productName,
+                    'variant_name' => $variant->name,
+                    'price' => $variant->price,
+                ];
+            });
+
+        return response()->json($variants);
+    }
+
     public function index(Request $request)
     {
         $query = Inventory::with(['productVariant.product', 'warehouse']);
@@ -54,6 +166,171 @@ class InventoryAdminController extends AdminController
         // Return appropriate view based on user role
         $viewPrefix = ($user && ($user->role->name === 'Manager' || $user->role->name === 'Inventory Manager')) ? 'manager' : 'admin';
         return view("{$viewPrefix}.inventory.index", compact('inventories', 'warehouses'));
+    }
+
+    /**
+     * Create a new warehouse (Admin only)
+     */
+    public function storeWarehouse(Request $request)
+    {
+        // This route is under admin middleware; extra guard for clarity
+        $user = Auth::user();
+        if (!$user || $user->role->name !== 'Admin') {
+            return back()->with('error', 'Chỉ Admin mới có quyền thêm kho.');
+        }
+
+        $validator = Validator::make($request->all(), [
+            'name' => ['required', 'string', 'max:255', Rule::unique('warehouses', 'name')],
+        ], [
+            'name.required' => 'Vui lòng nhập tên kho.',
+            'name.unique' => 'Tên kho đã tồn tại.',
+        ]);
+
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput();
+        }
+
+        Warehouse::create([
+            'name' => $request->name,
+            'location' => $request->input('location'), // optional, may be null
+        ]);
+
+        return back()->with('success', 'Đã tạo kho hàng mới.');
+    }
+
+    /**
+     * Show the form for editing the specified inventory.
+     */
+    public function edit(Inventory $inventory)
+    {
+        $user = Auth::user();
+
+        // Only inventory managers and admins can edit inventory records
+        if ($user && $user->role->name !== 'Inventory Manager' && $user->role->name !== 'Admin') {
+            return back()->with('error', 'Unauthorized access.');
+        }
+
+        // Check if user has access to this inventory
+        if ($user && $user->role->name === 'Inventory Manager' && $user->warehouse_id) {
+            if ($inventory->warehouse_id !== $user->warehouse_id) {
+                return back()->with('error', 'Unauthorized access to this inventory.');
+            }
+        }
+
+        $inventory->load(['productVariant.product', 'warehouse']);
+        $warehouses = Warehouse::all();
+
+        // Return appropriate view based on user role
+        $viewPrefix = ($user && ($user->role->name === 'Manager' || $user->role->name === 'Inventory Manager')) ? 'manager' : 'admin';
+        return view("{$viewPrefix}.inventory.edit", compact('inventory', 'warehouses'));
+    }
+
+    /**
+     * Update the specified inventory in storage.
+     */
+    public function update(Request $request, Inventory $inventory)
+    {
+        $user = Auth::user();
+
+        // Only inventory managers and admins can update inventory records
+        if ($user && $user->role->name !== 'Inventory Manager' && $user->role->name !== 'Admin') {
+            return back()->with('error', 'Unauthorized access.');
+        }
+
+        // Check if user has access to this inventory
+        if ($user && $user->role->name === 'Inventory Manager' && $user->warehouse_id) {
+            if ($inventory->warehouse_id !== $user->warehouse_id) {
+                return back()->with('error', 'Unauthorized access to this inventory.');
+            }
+        }
+
+        $validator = Validator::make($request->all(), [
+            'quantity_on_hand' => 'required|integer|min:0',
+            'quantity_reserved' => 'required|integer|min:0',
+            'reorder_level' => 'required|integer|min:0',
+        ]);
+
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput();
+        }
+
+        try {
+            // Update inventory record
+            $inventory->update([
+                'quantity_on_hand' => $request->quantity_on_hand,
+                'quantity_reserved' => $request->quantity_reserved,
+                'reorder_level' => $request->reorder_level,
+            ]);
+
+            return redirect()->route('manager.inventory.show', $inventory->id)->with('success', 'Inventory record updated successfully!');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to update inventory record: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Store a newly created inventory record
+     */
+    public function store(Request $request)
+    {
+        $user = Auth::user();
+
+        // Only inventory managers and admins can create inventory records
+        if ($user && $user->role->name !== 'Inventory Manager' && $user->role->name !== 'Admin') {
+            return back()->with('error', 'Unauthorized access.');
+        }
+
+        $validator = Validator::make($request->all(), [
+            'product_variant_id' => 'required|exists:product_variants,id',
+            'warehouse_id' => 'required|exists:warehouses,id',
+            'quantity_on_hand' => 'required|integer|min:0',
+            'quantity_reserved' => 'required|integer|min:0',
+            'reorder_level' => 'required|integer|min:0',
+        ]);
+
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput();
+        }
+
+        // Check if user has access to this warehouse
+        if ($user && $user->role->name === 'Inventory Manager' && $user->warehouse_id) {
+            if ($request->warehouse_id !== $user->warehouse_id) {
+                return back()->with('error', 'Unauthorized access to this warehouse.');
+            }
+        }
+
+        try {
+            // Check if inventory record already exists
+            $existingInventory = Inventory::where('product_variant_id', $request->product_variant_id)
+                ->where('warehouse_id', $request->warehouse_id)
+                ->first();
+
+            if ($existingInventory) {
+                return back()->with('error', 'Inventory record already exists for this product variant in this warehouse. Please adjust the existing record instead.');
+            }
+
+            // Create new inventory record
+            $inventory = Inventory::create([
+                'product_variant_id' => $request->product_variant_id,
+                'warehouse_id' => $request->warehouse_id,
+                'quantity_on_hand' => $request->quantity_on_hand,
+                'quantity_reserved' => $request->quantity_reserved,
+                'reorder_level' => $request->reorder_level,
+            ]);
+
+            // Create initial transaction record
+            InventoryTransaction::create([
+                'product_variant_id' => $inventory->product_variant_id,
+                'warehouse_id' => $inventory->warehouse_id,
+                'type' => 'inbound',
+                'quantity' => $inventory->quantity_on_hand,
+                'notes' => 'Initial inventory creation',
+            ]);
+
+            return back()->with('success', 'Inventory record created successfully!');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to create inventory record: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -106,15 +383,35 @@ class InventoryAdminController extends AdminController
             return back()->withErrors($validator)->withInput();
         }
 
+        $quantity = (int) $request->quantity;
+        $transactionType = $request->type;
+        $note = $request->input('notes');
+        if ($request->filled('reference_number')) {
+            $referenceSuffix = 'Ref: ' . $request->reference_number;
+            $note = $note ? "{$note} ({$referenceSuffix})" : $referenceSuffix;
+        }
+
+        if ($transactionType === 'inbound') {
+            try {
+                $this->inventoryService->inbound(
+                    $inventory->warehouse_id,
+                    $inventory->product_variant_id,
+                    abs($quantity),
+                    $note
+                );
+
+                return back()->with('success', 'Inventory adjusted successfully!');
+            } catch (\Throwable $e) {
+                return back()->with('error', 'Failed to adjust inventory: ' . $e->getMessage())->withInput();
+            }
+        }
+
         try {
             DB::beginTransaction();
 
-            $quantity = $request->quantity;
-            $transactionType = $request->type;
-
             // Calculate new quantity based on transaction type
             $newQuantity = $inventory->quantity_on_hand;
-            if ($transactionType === 'inbound' || ($transactionType === 'adjustment' && $quantity > 0)) {
+            if ($transactionType === 'adjustment' && $quantity > 0) {
                 $newQuantity += abs($quantity);
             } elseif ($transactionType === 'outbound' || ($transactionType === 'adjustment' && $quantity < 0)) {
                 $newQuantity -= abs($quantity);
@@ -126,12 +423,17 @@ class InventoryAdminController extends AdminController
             }
 
             // Create transaction record using product_variant_id and warehouse_id
+            $transactionQuantity = abs($quantity);
+            if ($transactionType === 'outbound' || ($transactionType === 'adjustment' && $quantity < 0)) {
+                $transactionQuantity = -abs($quantity);
+            }
+
             $transaction = InventoryTransaction::create([
                 'product_variant_id' => $inventory->product_variant_id,
                 'warehouse_id' => $inventory->warehouse_id,
                 'type' => $transactionType,
-                'quantity' => $quantity,
-                'notes' => $request->notes,
+                'quantity' => $transactionQuantity,
+                'notes' => $note,
             ]);
 
             // Update inventory
@@ -421,5 +723,43 @@ class InventoryAdminController extends AdminController
         };
 
         return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * Remove the specified inventory record from storage.
+     */
+    public function destroy(Inventory $inventory)
+    {
+        $user = Auth::user();
+
+        // Only inventory managers and admins can delete inventory records
+        if ($user && $user->role->name !== 'Inventory Manager' && $user->role->name !== 'Admin') {
+            return back()->with('error', 'Unauthorized access.');
+        }
+
+        // Check if user has access to this inventory
+        if ($user && $user->role->name === 'Inventory Manager' && $user->warehouse_id) {
+            if ($inventory->warehouse_id !== $user->warehouse_id) {
+                return back()->with('error', 'Unauthorized access to this inventory.');
+            }
+        }
+
+        try {
+            // Check if there are any transactions for this inventory
+            $transactionCount = InventoryTransaction::where('product_variant_id', $inventory->product_variant_id)
+                ->where('warehouse_id', $inventory->warehouse_id)
+                ->count();
+
+            if ($transactionCount > 0) {
+                return back()->with('error', 'Cannot delete inventory record with existing transactions. You can set quantity to zero instead.');
+            }
+
+            // Delete the inventory record
+            $inventory->delete();
+
+            return back()->with('success', 'Inventory record deleted successfully!');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to delete inventory record: ' . $e->getMessage());
+        }
     }
 }
