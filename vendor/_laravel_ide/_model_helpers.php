@@ -650,19 +650,23 @@ namespace App\Models {
      * App\Models\CartDetail
      *
      * @property \Illuminate\Support\Carbon|null $deleted_at
+     * @property float $price
      * @property \Illuminate\Support\Carbon|null $updated_at
      * @property \Illuminate\Support\Carbon|null $created_at
      * @property int $quantity
      * @property int $product_variant_id
      * @property int $cart_id
+     * @property int $id
      * @property-read \App\Models\Cart $cart
      * @property-read \App\Models\ProductVariant $productVariant
      * @property-read \App\Models\ProductVariant $variant
+     * @method static \Illuminate\Database\Eloquent\Builder<CartDetail>|CartDetail whereId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<CartDetail>|CartDetail whereCartId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<CartDetail>|CartDetail whereProductVariantId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<CartDetail>|CartDetail whereQuantity($value)
      * @method static \Illuminate\Database\Eloquent\Builder<CartDetail>|CartDetail whereCreatedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<CartDetail>|CartDetail whereUpdatedAt($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<CartDetail>|CartDetail wherePrice($value)
      * @method static \Illuminate\Database\Eloquent\Builder<CartDetail>|CartDetail whereDeletedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<CartDetail>|CartDetail newModelQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<CartDetail>|CartDetail newQuery()
@@ -1946,8 +1950,10 @@ namespace App\Models {
      * @property float $amount
      * @property int $payment_method_id
      * @property int $order_id
+     * @property int $id
      * @property-read \App\Models\PurchaseOrder $order
      * @property-read \App\Models\PaymentMethod $paymentMethod
+     * @method static \Illuminate\Database\Eloquent\Builder<Payment>|Payment whereId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Payment>|Payment whereOrderId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Payment>|Payment wherePaymentMethodId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Payment>|Payment whereAmount($value)
@@ -2914,13 +2920,12 @@ namespace App\Models {
      * @property \Illuminate\Support\Carbon|null $created_at
      * @property int $sort_order
      * @property boolean $is_primary
-     * @property string $image_url
      * @property int $product_id
      * @property int $id
+     * @property-read mixed $image_url
      * @property-read \App\Models\Product $product
      * @method static \Illuminate\Database\Eloquent\Builder<ProductImage>|ProductImage whereId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<ProductImage>|ProductImage whereProductId($value)
-     * @method static \Illuminate\Database\Eloquent\Builder<ProductImage>|ProductImage whereImageUrl($value)
      * @method static \Illuminate\Database\Eloquent\Builder<ProductImage>|ProductImage whereIsPrimary($value)
      * @method static \Illuminate\Database\Eloquent\Builder<ProductImage>|ProductImage whereSortOrder($value)
      * @method static \Illuminate\Database\Eloquent\Builder<ProductImage>|ProductImage whereCreatedAt($value)
@@ -3889,12 +3894,12 @@ namespace App\Models {
      * @property float $discount_amount
      * @property float $shipping_fee
      * @property float $sub_total
-     * @property string $shipping_address
-     * @property string $shipping_recipient_phone
-     * @property string $shipping_recipient_name
+     * @property string|null $shipping_address
+     * @property string|null $shipping_recipient_phone
+     * @property string|null $shipping_recipient_name
      * @property mixed $status
      * @property string $order_code
-     * @property int $user_id
+     * @property int|null $user_id
      * @property int $id
      * @property-read \App\Models\User $user
      * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\PurchaseOrderDetail> $orderDetails
@@ -3903,6 +3908,7 @@ namespace App\Models {
      * @property-read \App\Models\Shipment $shipment
      * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\InventoryTransaction> $inventoryTransactions
      * @property-read int|null $inventoryTransactions_count
+     * @property-read \App\Models\Warehouse $warehouse
      * @method static \Illuminate\Database\Eloquent\Builder<PurchaseOrder>|PurchaseOrder whereId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<PurchaseOrder>|PurchaseOrder whereUserId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<PurchaseOrder>|PurchaseOrder whereOrderCode($value)
@@ -4230,6 +4236,7 @@ namespace App\Models {
      * @property int $order_id
      * @property-read \App\Models\PurchaseOrder $order
      * @property-read \App\Models\ProductVariant $productVariant
+     * @property-read \App\Models\ProductVariant $variant
      * @method static \Illuminate\Database\Eloquent\Builder<PurchaseOrderDetail>|PurchaseOrderDetail whereOrderId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<PurchaseOrderDetail>|PurchaseOrderDetail whereProductVariantId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<PurchaseOrderDetail>|PurchaseOrderDetail whereQuantity($value)
@@ -4859,20 +4866,30 @@ namespace App\Models {
      * App\Models\Shipment
      *
      * @property \Illuminate\Support\Carbon|null $deleted_at
+     * @property \Illuminate\Support\Carbon|null $delivered_at
+     * @property \Illuminate\Support\Carbon|null $shipped_at
+     * @property string|null $carrier
      * @property \Illuminate\Support\Carbon|null $updated_at
      * @property \Illuminate\Support\Carbon|null $created_at
      * @property mixed $status
+     * @property string|null $tracking_number
      * @property string|null $tracking_code
      * @property int $shipping_method_id
      * @property int $order_id
+     * @property int $id
      * @property-read \App\Models\PurchaseOrder $order
      * @property-read \App\Models\ShippingMethod $shippingMethod
+     * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereOrderId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereShippingMethodId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereTrackingCode($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereTrackingNumber($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereStatus($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereCreatedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereUpdatedAt($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereCarrier($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereShippedAt($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereDeliveredAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment whereDeletedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment newModelQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<Shipment>|Shipment newQuery()

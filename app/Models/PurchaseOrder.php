@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use App\Models\Warehouse;
 
 class PurchaseOrder extends Model
 {
@@ -19,11 +20,13 @@ class PurchaseOrder extends Model
      */
     protected $fillable = [
         'user_id',
+        'warehouse_id',
         'order_code',
         'status',
         'shipping_recipient_name',
         'shipping_recipient_phone',
         'shipping_address',
+        'shipping_province',
         'sub_total',
         'shipping_fee',
         'discount_amount',
@@ -77,5 +80,13 @@ class PurchaseOrder extends Model
     public function inventoryTransactions(): HasMany
     {
         return $this->hasMany(InventoryTransaction::class, 'order_id');
+    }
+
+    /**
+     * Get the warehouse assigned to the order.
+     */
+    public function warehouse(): BelongsTo
+    {
+        return $this->belongsTo(Warehouse::class);
     }
 }

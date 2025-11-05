@@ -16,7 +16,7 @@ class PaymentMethodFactory extends Factory
      */
     public function definition(): array
     {
-        $name = $this->faker->randomElement(['Credit Card', 'Debit Card', 'Bank Transfer', 'PayPal', 'Cash on Delivery']);
+        $name = $this->faker->unique()->randomElement(['Credit Card', 'Debit Card', 'Bank Transfer', 'PayPal', 'Cash on Delivery']);
         return [
             'name' => $name,
             'code' => strtolower(str_replace(' ', '_', $name)),

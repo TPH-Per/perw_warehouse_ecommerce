@@ -2,16 +2,17 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Models\Product;
 use App\Models\Category;
-use App\Models\Supplier;
+use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\ProductImage;
+use App\Models\Supplier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class ProductAdminController extends AdminController
@@ -21,7 +22,7 @@ class ProductAdminController extends AdminController
      */
     public function index(Request $request)
     {
-        $query = Product::with(['category', 'supplier', 'variants']);
+        $query = Product::with(['category', 'supplier', 'variants.inventories.warehouse']);
 
         // Search functionality
         if ($request->filled('search')) {
@@ -49,7 +50,7 @@ class ProductAdminController extends AdminController
 
         // Filter products by user's assigned warehouse if they are a warehouse-specific manager
         $user = Auth::user();
-        if ($user && $user->role->name === 'Inventory Manager' && $user->warehouse_id) {
+        if ($user && $user->role->name === 'manager' && $user->warehouse_id) {
             // Only show products that have inventory in the user's assigned warehouse
             $query->whereHas('variants.inventories', function($q) use ($user) {
                 $q->where('warehouse_id', $user->warehouse_id);
@@ -61,7 +62,7 @@ class ProductAdminController extends AdminController
         $suppliers = Supplier::all();
 
         // Return appropriate view based on user role
-        $viewPrefix = ($user && ($user->role->name === 'Manager' || $user->role->name === 'Inventory Manager')) ? 'manager' : 'admin';
+        $viewPrefix = ($user && $user->role->name === 'manager') ? 'manager' : 'admin';
         return view("{$viewPrefix}.products.index", compact('products', 'categories', 'suppliers'));
     }
 
@@ -72,7 +73,7 @@ class ProductAdminController extends AdminController
     {
         // Check if user has access to this product
         $user = Auth::user();
-        if ($user && $user->role->name === 'Inventory Manager' && $user->warehouse_id) {
+        if ($user && $user->role->name === 'manager' && $user->warehouse_id) {
             // Check if this product has inventory in the user's assigned warehouse
             $hasInventoryInWarehouse = $product->variants()->whereHas('inventories', function($q) use ($user) {
                 $q->where('warehouse_id', $user->warehouse_id);
@@ -86,7 +87,7 @@ class ProductAdminController extends AdminController
         $product->load(['category', 'supplier', 'variants.inventories.warehouse', 'images']);
 
         // Return appropriate view based on user role
-        $viewPrefix = ($user && ($user->role->name === 'Manager' || $user->role->name === 'Inventory Manager')) ? 'manager' : 'admin';
+        $viewPrefix = ($user && $user->role->name === 'manager') ? 'manager' : 'admin';
         return view("{$viewPrefix}.products.show", compact('product'));
     }
 

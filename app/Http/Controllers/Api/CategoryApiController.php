@@ -38,8 +38,11 @@ class CategoryApiController extends Controller
         $perPage = $request->input('per_page', 15);
 
         $query = Product::with(['category', 'supplier', 'variants', 'images'])
-            ->where('status', 'active')
-            ->where('category_id', $id);
+            ->withCount('images as images_count')
+            ->where('status', 'published')
+            ->where('category_id', $id)
+            ->orderByDesc('images_count')
+            ->orderByDesc('id');
 
         if ($request->has('search')) {
             $query->where('name', 'like', '%' . $request->search . '%');
@@ -61,4 +64,3 @@ class CategoryApiController extends Controller
         return response()->json($products);
     }
 }
-

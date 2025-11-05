@@ -100,8 +100,9 @@
                     <li>Các trường có dấu <span class="text-danger">*</span> là bắt buộc</li>
                     <li>Email phải là duy nhất trong hệ thống</li>
                     <li>Mật khẩu phải có ít nhất 8 ký tự</li>
-                    <li>Vai trò Admin có toàn quyền hệ thống</li>
-                    <li>Vai trò Người dùng cuối dành cho khách hàng</li>
+                    <li>Vai trò admin có toàn quyền hệ thống</li>
+                    <li>Vai trò manager dành cho quản lý kho</li>
+                    <li>Vai trò endUser dành cho khách hàng</li>
                 </ul>
             </div>
         </div>

@@ -4,7 +4,7 @@
 
 @php
     $user = auth()->user();
-    $isWarehouseScopedManager = $user && $user->role->name === 'Inventory Manager' && $user->warehouse_id;
+    $isWarehouseScopedManager = $user && $user->role->name === 'manager' && $user->warehouse_id;
 @endphp
 
 @section('content')

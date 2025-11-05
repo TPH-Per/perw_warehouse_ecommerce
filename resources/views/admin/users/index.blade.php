@@ -30,7 +30,7 @@
                 <i class="bi bi-shield-check"></i>
             </div>
             <h5>Quản trị viên</h5>
-            <div class="value">{{ $users->filter(fn($u) => $u->role->name == 'Admin')->count() }}</div>
+            <div class="value">{{ $users->filter(fn($u) => $u->role->name == 'admin')->count() }}</div>
         </div>
     </div>
     <div class="col-md-3">
@@ -39,7 +39,7 @@
                 <i class="bi bi-person"></i>
             </div>
             <h5>Người dùng cuối</h5>
-            <div class="value">{{ $users->filter(fn($u) => $u->role->name == 'End User')->count() }}</div>
+            <div class="value">{{ $users->filter(fn($u) => $u->role->name == 'endUser')->count() }}</div>
         </div>
     </div>
     <div class="col-md-3">
@@ -130,8 +130,10 @@
                         <td>{{ $user->email }}</td>
                         <td>{{ $user->phone_number ?? 'N/A' }}</td>
                         <td>
-                            @if($user->role->name == 'Admin')
+                            @if($user->role->name == 'admin')
                                 <span class="badge bg-primary">{{ $user->role->name }}</span>
+                            @elseif($user->role->name == 'manager')
+                                <span class="badge bg-warning">{{ $user->role->name }}</span>
                             @else
                                 <span class="badge bg-info">{{ $user->role->name }}</span>
                             @endif

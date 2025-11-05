@@ -14,7 +14,10 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         $query = Product::with(['category', 'supplier', 'variants.inventories', 'images'])
-            ->whereIn('status', ['active', 'published']);
+            ->withCount('images as images_count')
+            ->where('status', 'published')
+            ->orderByDesc('images_count')
+            ->orderByDesc('id');
 
         // Filter by category
         if ($request->has('category_id')) {
@@ -42,6 +45,17 @@ class ProductController extends Controller
         $perPage = $request->input('per_page', 15);
         $products = $query->paginate($perPage);
 
+        // Add stock_quantity to each variant
+        $products->getCollection()->transform(function ($product) {
+            if ($product->variants) {
+                $product->variants->transform(function ($variant) {
+                    $variant->stock_quantity = $variant->inventories->sum('quantity_on_hand');
+                    return $variant;
+                });
+            }
+            return $product;
+        });
+
         return response()->json($products);
     }
 
@@ -53,7 +67,7 @@ class ProductController extends Controller
         $product = Product::with([
             'category',
             'supplier',
-            'variants',
+            'variants.inventories',
             'images',
             'reviews' => function ($query) {
                 $query->where('status', 'approved')
@@ -61,6 +75,14 @@ class ProductController extends Controller
                     ->orderBy('created_at', 'desc');
             }
         ])->findOrFail($id);
+
+        // Add stock_quantity to each variant
+        if ($product->variants) {
+            $product->variants->transform(function ($variant) {
+                $variant->stock_quantity = $variant->inventories->sum('quantity_on_hand');
+                return $variant;
+            });
+        }
 
         return response()->json($product);
     }
@@ -74,7 +96,7 @@ class ProductController extends Controller
             ->with([
                 'category',
                 'supplier',
-                'variants',
+                'variants.inventories',
                 'images',
                 'reviews' => function ($query) {
                     $query->where('status', 'approved')
@@ -83,6 +105,14 @@ class ProductController extends Controller
                 }
             ])
             ->firstOrFail();
+
+        // Add stock_quantity to each variant
+        if ($product->variants) {
+            $product->variants->transform(function ($variant) {
+                $variant->stock_quantity = $variant->inventories->sum('quantity_on_hand');
+                return $variant;
+            });
+        }
 
         return response()->json($product);
     }
@@ -93,10 +123,23 @@ class ProductController extends Controller
     public function featured()
     {
         $products = Product::with(['category', 'supplier', 'variants.inventories', 'images'])
-            ->whereIn('status', ['active', 'published'])
+            ->withCount('images as images_count')
+            ->where('status', 'published')
+            ->orderByDesc('images_count')
             ->inRandomOrder()
             ->limit(8)
             ->get();
+
+        // Add stock_quantity to each variant
+        $products->transform(function ($product) {
+            if ($product->variants) {
+                $product->variants->transform(function ($variant) {
+                    $variant->stock_quantity = $variant->inventories->sum('quantity_on_hand');
+                    return $variant;
+                });
+            }
+            return $product;
+        });
 
         return response()->json($products);
     }
@@ -109,13 +152,26 @@ class ProductController extends Controller
         $query = $request->input('q', '');
 
         $products = Product::with(['category', 'supplier', 'variants.inventories', 'images'])
-            ->whereIn('status', ['active', 'published'])
+            ->withCount('images as images_count')
+            ->where('status', 'published')
+            ->orderByDesc('images_count')
             ->where(function ($q) use ($query) {
                 $q->where('name', 'like', '%' . $query . '%')
                     ->orWhere('description', 'like', '%' . $query . '%');
             })
             ->limit(10)
             ->get();
+
+        // Add stock_quantity to each variant
+        $products->transform(function ($product) {
+            if ($product->variants) {
+                $product->variants->transform(function ($variant) {
+                    $variant->stock_quantity = $variant->inventories->sum('quantity_on_hand');
+                    return $variant;
+                });
+            }
+            return $product;
+        });
 
         return response()->json($products);
     }

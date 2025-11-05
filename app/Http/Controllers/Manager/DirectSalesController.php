@@ -3,19 +3,19 @@
 namespace App\Http\Controllers\Manager;
 
 use App\Http\Controllers\Controller;
-use App\Models\PurchaseOrder;
-use App\Models\PurchaseOrderDetail;
+use App\Models\Inventory;
+use App\Models\InventoryTransaction;
 use App\Models\Payment;
 use App\Models\PaymentMethod;
 use App\Models\ProductVariant;
-use App\Models\Inventory;
-use App\Models\InventoryTransaction;
+use App\Models\PurchaseOrder;
+use App\Models\PurchaseOrderDetail;
 use App\Models\Warehouse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 
 class DirectSalesController extends Controller
 {
@@ -68,7 +68,7 @@ class DirectSalesController extends Controller
     {
         // Limit warehouses to the manager's assigned warehouse when applicable
         $user = Auth::user();
-        if ($user && $user->role && $user->role->name === 'Inventory Manager' && $user->warehouse_id) {
+        if ($user && $user->role && $user->role->name === 'manager' && $user->warehouse_id) {
             $warehouses = Warehouse::where('id', $user->warehouse_id)->get();
         } else {
             $warehouses = Warehouse::all();
@@ -101,10 +101,10 @@ class DirectSalesController extends Controller
 
         DB::beginTransaction();
         try {
-            // Enforce assigned warehouse for Inventory Manager accounts
+            // Enforce assigned warehouse for manager accounts
             $user = Auth::user();
             $warehouseId = $request->warehouse_id;
-            if ($user && $user->role && $user->role->name === 'Inventory Manager' && $user->warehouse_id) {
+            if ($user && $user->role && $user->role->name === 'manager' && $user->warehouse_id) {
                 // Override to assigned warehouse to prevent cross-warehouse access
                 $warehouseId = (int) $user->warehouse_id;
             }
@@ -248,9 +248,9 @@ class DirectSalesController extends Controller
         ]);
 
         $warehouseId = $request->warehouse_id;
-        // Enforce assigned warehouse for Inventory Manager accounts on product lookup
+        // Enforce assigned warehouse for manager accounts on product lookup
         $user = Auth::user();
-        if ($user && $user->role && $user->role->name === 'Inventory Manager' && $user->warehouse_id) {
+        if ($user && $user->role && $user->role->name === 'manager' && $user->warehouse_id) {
             $warehouseId = (int) $user->warehouse_id;
         }
 

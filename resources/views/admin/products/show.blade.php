@@ -117,9 +117,12 @@
                 @if($product->images->count() > 0)
                     @foreach($product->images as $image)
                     <div class="mb-3">
-                        <img src="{{ asset('storage/' . $image->image_url) }}"
-                             class="img-fluid rounded"
-                             alt="Product Image">
+                        <!-- Fix image URL handling -->
+                        @if(Str::startsWith($image->image_url, ['http://', 'https://']))
+                            <img src="{{ $image->image_url }}" class="img-fluid rounded" alt="Product Image">
+                        @else
+                            <img src="{{ asset(ltrim($image->image_url, '/')) }}" class="img-fluid rounded" alt="Product Image">
+                        @endif
                         @if($image->is_primary)
                             <span class="badge bg-primary mt-2">Primary Image</span>
                         @endif

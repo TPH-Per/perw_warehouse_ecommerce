@@ -50,7 +50,8 @@ class UserAdminController extends AdminController
         }
 
         $users = $query->paginate(20);
-        $roles = Role::all();
+        // Only fetch specific roles: endUser, admin, manager
+        $roles = Role::whereIn('name', ['endUser', 'admin', 'manager'])->get();
 
         Log::info('Users query result', ['total_users' => $users->total()]);
 
@@ -62,7 +63,8 @@ class UserAdminController extends AdminController
      */
     public function create()
     {
-        $roles = Role::all();
+        // Only fetch specific roles: endUser, admin, manager
+        $roles = Role::whereIn('name', ['endUser', 'admin', 'manager'])->get();
 
         return view('admin.users.create', compact('roles'));
     }
@@ -136,7 +138,8 @@ class UserAdminController extends AdminController
      */
     public function edit(User $user)
     {
-        $roles = Role::all();
+        // Only fetch specific roles: endUser, admin, manager
+        $roles = Role::whereIn('name', ['endUser', 'admin', 'manager'])->get();
 
         return view('admin.users.edit', compact('user', 'roles'));
     }

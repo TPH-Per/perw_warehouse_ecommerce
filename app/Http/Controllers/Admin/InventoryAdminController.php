@@ -37,7 +37,7 @@ class InventoryAdminController extends AdminController
         ]);
 
         $user = Auth::user();
-        if ($user && $user->role->name === 'Inventory Manager' && (int) $user->warehouse_id !== (int) $request->warehouse_id) {
+        if ($user && $user->role->name === 'manager' && (int) $user->warehouse_id !== (int) $request->warehouse_id) {
             return back()->with('error', 'Bạn không có quyền nhập kho khác.');
         }
 
@@ -136,7 +136,7 @@ class InventoryAdminController extends AdminController
 
         // Filter by user's assigned warehouse if they are a warehouse-specific manager
         $user = Auth::user();
-        if ($user && $user->role->name === 'Inventory Manager' && $user->warehouse_id) {
+        if ($user && $user->role->name === 'manager' && $user->warehouse_id) {
             $query->where('warehouse_id', $user->warehouse_id);
         }
 
@@ -151,7 +151,7 @@ class InventoryAdminController extends AdminController
         }
 
         // Filter by warehouse (only for admins)
-        if ($request->has('warehouse_id') && (!$user || $user->role->name === 'Admin')) {
+        if ($request->has('warehouse_id') && (!$user || $user->role->name === 'admin')) {
             $query->where('warehouse_id', $request->warehouse_id);
         }
 
@@ -164,7 +164,7 @@ class InventoryAdminController extends AdminController
         $warehouses = Warehouse::all();
 
         // Return appropriate view based on user role
-        $viewPrefix = ($user && ($user->role->name === 'Manager' || $user->role->name === 'Inventory Manager')) ? 'manager' : 'admin';
+        $viewPrefix = ($user && ($user->role->name === 'manager')) ? 'manager' : 'admin';
         return view("{$viewPrefix}.inventory.index", compact('inventories', 'warehouses'));
     }
 
@@ -175,7 +175,7 @@ class InventoryAdminController extends AdminController
     {
         // This route is under admin middleware; extra guard for clarity
         $user = Auth::user();
-        if (!$user || $user->role->name !== 'Admin') {
+        if (!$user || $user->role->name !== 'admin') {
             return back()->with('error', 'Chỉ Admin mới có quyền thêm kho.');
         }
 
@@ -206,12 +206,12 @@ class InventoryAdminController extends AdminController
         $user = Auth::user();
 
         // Only inventory managers and admins can edit inventory records
-        if ($user && $user->role->name !== 'Inventory Manager' && $user->role->name !== 'Admin') {
+        if ($user && $user->role->name !== 'manager' && $user->role->name !== 'admin') {
             return back()->with('error', 'Unauthorized access.');
         }
 
         // Check if user has access to this inventory
-        if ($user && $user->role->name === 'Inventory Manager' && $user->warehouse_id) {
+        if ($user && $user->role->name === 'manager' && $user->warehouse_id) {
             if ($inventory->warehouse_id !== $user->warehouse_id) {
                 return back()->with('error', 'Unauthorized access to this inventory.');
             }
@@ -221,7 +221,7 @@ class InventoryAdminController extends AdminController
         $warehouses = Warehouse::all();
 
         // Return appropriate view based on user role
-        $viewPrefix = ($user && ($user->role->name === 'Manager' || $user->role->name === 'Inventory Manager')) ? 'manager' : 'admin';
+        $viewPrefix = ($user && ($user->role->name === 'manager')) ? 'manager' : 'admin';
         return view("{$viewPrefix}.inventory.edit", compact('inventory', 'warehouses'));
     }
 
@@ -233,12 +233,12 @@ class InventoryAdminController extends AdminController
         $user = Auth::user();
 
         // Only inventory managers and admins can update inventory records
-        if ($user && $user->role->name !== 'Inventory Manager' && $user->role->name !== 'Admin') {
+        if ($user && $user->role->name !== 'manager' && $user->role->name !== 'admin') {
             return back()->with('error', 'Unauthorized access.');
         }
 
         // Check if user has access to this inventory
-        if ($user && $user->role->name === 'Inventory Manager' && $user->warehouse_id) {
+        if ($user && $user->role->name === 'manager' && $user->warehouse_id) {
             if ($inventory->warehouse_id !== $user->warehouse_id) {
                 return back()->with('error', 'Unauthorized access to this inventory.');
             }
@@ -276,7 +276,7 @@ class InventoryAdminController extends AdminController
         $user = Auth::user();
 
         // Only inventory managers and admins can create inventory records
-        if ($user && $user->role->name !== 'Inventory Manager' && $user->role->name !== 'Admin') {
+        if ($user && $user->role->name !== 'manager' && $user->role->name !== 'admin') {
             return back()->with('error', 'Unauthorized access.');
         }
 
@@ -293,7 +293,7 @@ class InventoryAdminController extends AdminController
         }
 
         // Check if user has access to this warehouse
-        if ($user && $user->role->name === 'Inventory Manager' && $user->warehouse_id) {
+        if ($user && $user->role->name === 'manager' && $user->warehouse_id) {
             if ($request->warehouse_id !== $user->warehouse_id) {
                 return back()->with('error', 'Unauthorized access to this warehouse.');
             }
@@ -340,7 +340,7 @@ class InventoryAdminController extends AdminController
     {
         // Check if user has access to this inventory
         $user = Auth::user();
-        if ($user && $user->role->name === 'Inventory Manager' && $user->warehouse_id) {
+        if ($user && $user->role->name === 'manager' && $user->warehouse_id) {
             if ($inventory->warehouse_id !== $user->warehouse_id) {
                 abort(403, 'Unauthorized access to this inventory.');
             }
@@ -355,7 +355,7 @@ class InventoryAdminController extends AdminController
             ->paginate(20);
 
         // Return appropriate view based on user role
-        $viewPrefix = ($user && ($user->role->name === 'Manager' || $user->role->name === 'Inventory Manager')) ? 'manager' : 'admin';
+        $viewPrefix = ($user && ($user->role->name === 'manager')) ? 'manager' : 'admin';
         return view("{$viewPrefix}.inventory.show", compact('inventory', 'transactions'));
     }
 
@@ -366,7 +366,7 @@ class InventoryAdminController extends AdminController
     {
         // Check if user has access to this inventory
         $user = Auth::user();
-        if ($user && $user->role->name === 'Inventory Manager' && $user->warehouse_id) {
+        if ($user && $user->role->name === 'manager' && $user->warehouse_id) {
             if ($inventory->warehouse_id !== $user->warehouse_id) {
                 return back()->with('error', 'Unauthorized access to this inventory.');
             }
@@ -456,7 +456,7 @@ class InventoryAdminController extends AdminController
         $user = Auth::user();
 
         // Only admins can transfer inventory between warehouses
-        if ($user && $user->role->name !== 'Admin') {
+        if ($user && $user->role->name !== 'admin') {
             return back()->with('error', 'Only administrators can transfer inventory between warehouses.');
         }
 
@@ -486,7 +486,7 @@ class InventoryAdminController extends AdminController
             }
 
             // Check if user has access to source inventory (for warehouse-specific managers)
-            if ($user && $user->role->name === 'Inventory Manager' && $user->warehouse_id) {
+            if ($user && $user->role->name === 'manager' && $user->warehouse_id) {
                 if ($sourceInventory->warehouse_id !== $user->warehouse_id) {
                     return back()->with('error', 'Unauthorized access to source inventory.');
                 }
@@ -547,7 +547,7 @@ class InventoryAdminController extends AdminController
     {
         // Check if user has access to this inventory
         $user = Auth::user();
-        if ($user && $user->role->name === 'Inventory Manager' && $user->warehouse_id) {
+        if ($user && $user->role->name === 'manager' && $user->warehouse_id) {
             if ($inventory->warehouse_id !== $user->warehouse_id) {
                 return $this->errorResponse('Unauthorized access to this inventory.');
             }
@@ -580,7 +580,7 @@ class InventoryAdminController extends AdminController
 
         // Filter by user's assigned warehouse if they are a warehouse-specific manager
         $user = Auth::user();
-        if ($user && $user->role->name === 'Inventory Manager' && $user->warehouse_id) {
+        if ($user && $user->role->name === 'manager' && $user->warehouse_id) {
             $query->where('warehouse_id', $user->warehouse_id);
         } else if ($request->has('warehouse_id')) {
             // Filter by warehouse (only for admins or when no specific warehouse is assigned)
@@ -591,7 +591,7 @@ class InventoryAdminController extends AdminController
         $warehouses = Warehouse::all();
 
         // Return appropriate view based on user role
-        $viewPrefix = ($user && ($user->role->name === 'Manager' || $user->role->name === 'Inventory Manager')) ? 'manager' : 'admin';
+        $viewPrefix = ($user && ($user->role->name === 'manager')) ? 'manager' : 'admin';
         return view("{$viewPrefix}.inventory.low-stock", compact('inventories', 'warehouses'));
     }
 
@@ -604,7 +604,7 @@ class InventoryAdminController extends AdminController
         $user = Auth::user();
         $warehouseId = null;
 
-        if ($user && $user->role->name === 'Inventory Manager' && $user->warehouse_id) {
+        if ($user && $user->role->name === 'manager' && $user->warehouse_id) {
             $warehouseId = $user->warehouse_id;
         } else if ($request->has('warehouse_id')) {
             $warehouseId = $request->warehouse_id;
@@ -624,7 +624,7 @@ class InventoryAdminController extends AdminController
         ];
 
         // Return appropriate view based on user role
-        $viewPrefix = ($user && ($user->role->name === 'Manager' || $user->role->name === 'Inventory Manager')) ? 'manager' : 'admin';
+        $viewPrefix = ($user && ($user->role->name === 'manager')) ? 'manager' : 'admin';
         return view("{$viewPrefix}.inventory.statistics", compact('stats'));
     }
 
@@ -637,7 +637,7 @@ class InventoryAdminController extends AdminController
 
         // Filter by user's assigned warehouse if they are a warehouse-specific manager
         $user = Auth::user();
-        if ($user && $user->role->name === 'Inventory Manager' && $user->warehouse_id) {
+        if ($user && $user->role->name === 'manager' && $user->warehouse_id) {
             $query->where('warehouse_id', $user->warehouse_id);
         } else if ($request->has('warehouse_id')) {
             // Filter by warehouse (only for admins or when no specific warehouse is assigned)
@@ -670,7 +670,7 @@ class InventoryAdminController extends AdminController
         $products = ProductVariant::with('product')->get()->pluck('product.name', 'product.id')->unique();
 
         // Return appropriate view based on user role
-        $viewPrefix = ($user && ($user->role->name === 'Manager' || $user->role->name === 'Inventory Manager')) ? 'manager' : 'admin';
+        $viewPrefix = ($user && ($user->role->name === 'manager')) ? 'manager' : 'admin';
         return view("{$viewPrefix}.inventory.transactions", compact('transactions', 'warehouses', 'products'));
     }
 
@@ -683,7 +683,7 @@ class InventoryAdminController extends AdminController
 
         // Filter by user's assigned warehouse if they are a warehouse-specific manager
         $user = Auth::user();
-        if ($user && $user->role->name === 'Inventory Manager' && $user->warehouse_id) {
+        if ($user && $user->role->name === 'manager' && $user->warehouse_id) {
             $query->where('warehouse_id', $user->warehouse_id);
         } else if ($request->has('warehouse_id')) {
             // Filter by warehouse (only for admins or when no specific warehouse is assigned)
@@ -733,12 +733,12 @@ class InventoryAdminController extends AdminController
         $user = Auth::user();
 
         // Only inventory managers and admins can delete inventory records
-        if ($user && $user->role->name !== 'Inventory Manager' && $user->role->name !== 'Admin') {
+        if ($user && $user->role->name !== 'manager' && $user->role->name !== 'admin') {
             return back()->with('error', 'Unauthorized access.');
         }
 
         // Check if user has access to this inventory
-        if ($user && $user->role->name === 'Inventory Manager' && $user->warehouse_id) {
+        if ($user && $user->role->name === 'manager' && $user->warehouse_id) {
             if ($inventory->warehouse_id !== $user->warehouse_id) {
                 return back()->with('error', 'Unauthorized access to this inventory.');
             }

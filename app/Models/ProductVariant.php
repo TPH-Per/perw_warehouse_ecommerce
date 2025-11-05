@@ -33,6 +33,8 @@ class ProductVariant extends Model
      * @var array
      */
     protected $casts = [
+        'price' => 'float',
+        'original_price' => 'float',
         'deleted_at' => 'datetime',
     ];
 

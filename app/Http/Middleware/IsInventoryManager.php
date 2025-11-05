@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
 class IsInventoryManager
@@ -16,7 +17,7 @@ class IsInventoryManager
     public function handle(Request $request, Closure $next): Response
     {
         // Check if user is authenticated
-        if (!auth()->check()) {
+        if (!Auth::check()) {
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => false,
@@ -28,7 +29,7 @@ class IsInventoryManager
         }
 
         // Check if user has Inventory Manager role
-        if (!auth()->user()->role || auth()->user()->role->name !== 'Inventory Manager') {
+        if (!Auth::user()->role || Auth::user()->role->name !== 'manager') {
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => false,
@@ -40,8 +41,8 @@ class IsInventoryManager
         }
 
         // Check if user account is active
-        if (auth()->user()->status !== 'active') {
-            auth()->logout();
+        if (Auth::user()->status !== 'active') {
+            Auth::logout();
 
             if ($request->expectsJson()) {
                 return response()->json([

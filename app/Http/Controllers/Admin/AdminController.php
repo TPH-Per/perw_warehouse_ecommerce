@@ -54,6 +54,6 @@ class AdminController extends Controller
      */
     protected function isAdmin(): bool
     {
-        return Auth::check() && Auth::user()->role->name === 'Admin';
+        return Auth::check() && Auth::user()->role->name === 'admin';
     }
 }

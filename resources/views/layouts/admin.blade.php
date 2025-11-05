@@ -7,6 +7,7 @@
     <title>@yield('title', 'Bảng điều khiển Admin') - PerW</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --sky-blue: #87CEEB;
@@ -20,7 +21,7 @@
         body {
             background: linear-gradient(135deg, #E0F6FF 0%, #B8E6FF 50%, #87CEEB 100%);
             min-height: 100vh;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', sans-serif;
         }
 
         .sidebar {

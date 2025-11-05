@@ -14,9 +14,11 @@ return new class extends Migration
         Schema::create('payment_methods', function (Blueprint $table) {
             $table->id();
             $table->string('name', 100);
-            $table->string('code', 50)->unique();
+            $table->string('code', 50);
             $table->boolean('is_active')->default(true);
             $table->timestamps();
+
+            $table->unique(['name','code']);
         });
     }
 

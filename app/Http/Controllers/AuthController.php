@@ -34,9 +34,9 @@ class AuthController extends Controller
             // Redirect based on user role
             if ($user->role) {
                 switch ($user->role->name) {
-                    case 'Admin':
+                    case 'admin':
                         return redirect()->intended(route('admin.dashboard'));
-                    case 'Inventory Manager':
+                    case 'manager':
                         return redirect()->intended(route('manager.dashboard'));
                     default:
                         // End users or other roles

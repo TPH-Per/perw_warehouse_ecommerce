@@ -22,13 +22,23 @@ class PaymentFactory extends Factory
         $orders = PurchaseOrder::all();
         $paymentMethods = PaymentMethod::all();
 
+        // Correctly create a PurchaseOrder if none exist and get its ID
+        $orderId = $orders->isNotEmpty() 
+            ? $orders->random()->id 
+            : PurchaseOrder::factory()->create()->id; // Use ->create() to save and get ID
+
+        // Correctly create a PaymentMethod if none exist and get its ID
+        $paymentMethodId = $paymentMethods->isNotEmpty() 
+            ? $paymentMethods->random()->id 
+            : PaymentMethod::factory()->create()->id; // Use ->create() to save and get ID
+
         return [
-            'order_id' => $orders->isNotEmpty() ? $orders->random()->id : PurchaseOrder::factory(),
-            'payment_method_id' => $paymentMethods->isNotEmpty() ? $paymentMethods->random()->id : PaymentMethod::factory(),
-            'transaction_id' => $this->faker->uuid,
+            'order_id' => $orderId,
+            'payment_method_id' => $paymentMethodId,
+            'transaction_code' => $this->faker->uuid,
             'amount' => $this->faker->randomFloat(2, 10000, 10000000),
             'status' => $this->faker->randomElement(['pending', 'completed', 'failed', 'refunded']),
-            'payment_date' => $this->faker->dateTimeThisYear,
+            // DO NOT set 'id' here; let the database auto-increment it.
         ];
     }
 }

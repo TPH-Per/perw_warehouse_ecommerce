@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Cart;
 use App\Models\CartDetail;
 use App\Models\ProductVariant;
+use App\Models\Warehouse;
 use Illuminate\Http\Request;
 
 class CartApiController extends Controller
@@ -24,7 +25,8 @@ class CartApiController extends Controller
         $cart->load([
             'cartDetails.variant.product.images' => function ($query) {
                 $query->where('is_primary', true);
-            }
+            },
+            'cartDetails.variant.inventories.warehouse',
         ]);
 
         // Calculate totals
@@ -60,11 +62,20 @@ class CartApiController extends Controller
                             'slug' => $detail->variant->product->slug,
                             'images' => $detail->variant->product->images,
                         ] : null,
+                        'inventories' => $detail->variant->inventories->map(function ($inventory) {
+                            $available = max(0, ($inventory->quantity_on_hand ?? 0) - ($inventory->quantity_reserved ?? 0));
+                            return [
+                                'warehouse_id' => $inventory->warehouse_id,
+                                'warehouse_name' => $inventory->warehouse->name ?? null,
+                                'available_quantity' => $available,
+                            ];
+                        }),
                     ] : null,
                 ];
             }),
             'total_items' => $totalItems,
             'total_amount' => $totalAmount,
+            'warehouses' => $this->buildWarehouseBuckets($cart->cartDetails),
         ]);
     }
 
@@ -202,5 +213,77 @@ class CartApiController extends Controller
         return response()->json([
             'message' => 'Cart cleared successfully'
         ]);
+    }
+
+    /**
+     * Build warehouse buckets (three fields) containing cart items available per warehouse.
+     *
+     * @param \Illuminate\Support\Collection $cartDetails
+     * @return array<string, array>
+     */
+    protected function buildWarehouseBuckets($cartDetails): array
+    {
+        // Map warehouse IDs to the 3 desired response buckets
+        $bucketMap = [
+            1 => 'warehouse_hanoi',
+            2 => 'warehouse_hcm',
+            3 => 'warehouse_binhdinh',
+        ];
+
+        $warehouses = Warehouse::whereIn('id', array_keys($bucketMap))->get()->keyBy('id');
+
+        // Initialise buckets
+        $buckets = [];
+        foreach ($bucketMap as $warehouseId => $bucketKey) {
+            $warehouse = $warehouses->get($warehouseId);
+            $buckets[$bucketKey] = [
+                'warehouse_id' => $warehouseId,
+                'warehouse_name' => $warehouse->name ?? 'Warehouse',
+                'location' => $warehouse->location ?? null,
+                'items' => [],
+            ];
+        }
+
+        foreach ($cartDetails as $detail) {
+            if (!$detail->variant) {
+                continue;
+            }
+
+            foreach ($detail->variant->inventories as $inventory) {
+                $available = max(0, ($inventory->quantity_on_hand ?? 0) - ($inventory->quantity_reserved ?? 0));
+                if ($available <= 0) {
+                    continue;
+                }
+
+                $bucketKey = $bucketMap[$inventory->warehouse_id] ?? null;
+                if (!$bucketKey || !isset($buckets[$bucketKey])) {
+                    continue;
+                }
+
+                $buckets[$bucketKey]['items'][] = [
+                    'cart_detail_id' => $detail->id,
+                    'product_variant_id' => $detail->product_variant_id,
+                    'quantity_in_cart' => $detail->quantity,
+                    'unit_price' => $detail->price,
+                    'subtotal' => $detail->price * $detail->quantity,
+                    'available_quantity' => $available,
+                    'variant' => $detail->variant ? [
+                        'id' => $detail->variant->id,
+                        'sku' => $detail->variant->sku,
+                        'size' => $detail->variant->size,
+                        'color' => $detail->variant->color,
+                        'price' => $detail->variant->price,
+                        'product' => $detail->variant->product ? [
+                            'id' => $detail->variant->product->id,
+                            'name' => $detail->variant->product->name,
+                            'slug' => $detail->variant->product->slug,
+                            'primary_image' => optional(optional(optional($detail->variant->product)->images)->first())->image_url,
+                        ] : null,
+                    ] : null,
+                ];
+            }
+        }
+
+        return $buckets;
     }
 }

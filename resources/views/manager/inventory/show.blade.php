@@ -1,12 +1,12 @@
 @extends('layouts.manager')
 
-@section('title', 'Chi tiết Kho hàng')
+@section('title', 'Chi tiết tồn kho')
 
 @section('content')
 <div class="page-header d-flex justify-content-between align-items-center">
     <div>
-        <h1><i class="bi bi-box-seam"></i> Chi tiết Kho hàng</h1>
-        <p class="text-muted mb-0">{{ $inventory->productVariant->product->name }} - {{ $inventory->productVariant->name }}</p>
+        <h1><i class="bi bi-box"></i> Chi tiết tồn kho</h1>
+        <p class="text-muted mb-0">Thông tin chi tiết bản ghi tồn kho.</p>
     </div>
     <a href="{{ route('manager.inventory.index') }}" class="btn btn-secondary">
         <i class="bi bi-arrow-left"></i> Quay lại
@@ -15,7 +15,7 @@
 
 @php
     $user = auth()->user();
-    $isWarehouseSpecificManager = $user && $user->role->name === 'Inventory Manager' && $user->warehouse_id;
+    $isWarehouseSpecificManager = $user && $user->role->name === 'manager' && $user->warehouse_id;
 @endphp
 
 <div class="row">

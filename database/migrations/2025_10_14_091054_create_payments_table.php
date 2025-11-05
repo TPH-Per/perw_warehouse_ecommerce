@@ -12,6 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('payments', function (Blueprint $table) {
+            // 1. Add a standard auto-incrementing primary key 'id'
+            $table->id(); 
+
             $table->unsignedBigInteger('order_id');
             $table->unsignedBigInteger('payment_method_id');
             $table->decimal('amount', 12, 2);
@@ -19,9 +22,14 @@ return new class extends Migration
             $table->string('transaction_code', 100)->nullable();
             $table->timestamps();
 
-            $table->primary('order_id');
+            // 2. REMOVE: $table->primary('order_id');
+
             $table->foreign('order_id')->references('id')->on('purchase_orders')->onDelete('cascade');
             $table->foreign('payment_method_id')->references('id')->on('payment_methods');
+            
+            // Optional: If you still want to ensure one payment per order, 
+            // you can add a UNIQUE index instead of a PRIMARY key:
+            // $table->unique('order_id'); 
         });
     }
 

@@ -7,58 +7,10 @@ use App\Models\User;
 use App\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 
 class AuthApiController extends Controller
 {
-    /**
-     * Register a new customer
-     */
-    public function register(Request $request)
-    {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8|confirmed',
-            'phone_number' => 'nullable|string|max:20',
-        ]);
-
-        // Get customer role (fallback to End User)
-        $customerRole = Role::whereIn('name', ['Customer', 'End User'])->orderByRaw("FIELD(name, 'Customer', 'End User')")->first();
-        if (!$customerRole) {
-            return response()->json([
-                'message' => 'Customer/End User role not found. Please seed roles.'
-            ], 500);
-        }
-
-        $user = User::create([
-            'name' => $validated['name'],
-            'full_name' => $validated['name'],
-            'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
-            'phone_number' => $validated['phone_number'] ?? null,
-            'role_id' => $customerRole->id,
-            'status' => 'active',
-        ]);
-
-        $token = $user->createToken('auth_token')->plainTextToken;
-
-        return response()->json([
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'phone_number' => $user->phone_number,
-                'role' => [
-                    'id' => $user->role->id,
-                    'name' => $user->role->name,
-                ],
-            ],
-            'token' => $token,
-        ], 201);
-    }
-
     /**
      * Login user
      */
@@ -69,7 +21,7 @@ class AuthApiController extends Controller
             'password' => 'required',
         ]);
 
-        $user = User::where('email', $request->email)->first();
+        $user = User::with('role')->where('email', $request->email)->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
@@ -77,10 +29,10 @@ class AuthApiController extends Controller
             ]);
         }
 
-        // Check if user is allowed (Customer or End User)
-        if ($user->role && !in_array($user->role->name, ['Customer', 'End User'])) {
+        // Check if user is allowed (endUser role only)
+        if ($user->role && $user->role->name !== 'endUser') {
             return response()->json([
-                'message' => 'Access denied. Customer accounts only.'
+                'message' => 'Access denied. End-user accounts only.'
             ], 403);
         }
 
@@ -97,6 +49,7 @@ class AuthApiController extends Controller
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
+                'full_name' => $user->full_name,
                 'email' => $user->email,
                 'phone_number' => $user->phone_number,
                 'role' => [
@@ -106,6 +59,54 @@ class AuthApiController extends Controller
             ],
             'token' => $token,
         ]);
+    }
+
+    /**
+     * Register a new user
+     */
+    public function register(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users',
+            'password' => 'required|string|min:8|confirmed',
+            'phone_number' => 'nullable|string|max:20',
+        ]);
+
+        // Get endUser role
+        $endUserRole = Role::where('name', 'endUser')->first();
+        if (!$endUserRole) {
+            return response()->json([
+                'message' => 'EndUser role not found. Please contact administrator.'
+            ], 500);
+        }
+
+        $user = User::create([
+            'name' => $request->name,
+            'full_name' => $request->name,
+            'email' => $request->email,
+            'password' => $request->password,  // Let Laravel auto-hash via cast
+            'phone_number' => $request->phone_number ?? null,
+            'role_id' => $endUserRole->id,
+            'status' => 'active',
+        ]);
+
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        return response()->json([
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'full_name' => $user->full_name,
+                'email' => $user->email,
+                'phone_number' => $user->phone_number,
+                'role' => [
+                    'id' => $user->role->id,
+                    'name' => $user->role->name,
+                ],
+            ],
+            'token' => $token,
+        ], 201);
     }
 
     /**
@@ -125,7 +126,7 @@ class AuthApiController extends Controller
      */
     public function user(Request $request)
     {
-        $user = $request->user();
+        $user = $request->user()->load('role');
 
         return response()->json([
             'id' => $user->id,

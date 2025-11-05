@@ -179,10 +179,12 @@
                 @if($product->images && $product->images->count() > 0)
                     @foreach($product->images as $image)
                         <div class="mb-3">
-                            <img src="{{ asset('storage/' . $image->image_url) }}"
-                                 alt="{{ $product->name }}"
-                                 class="img-fluid rounded"
-                                 style="width: 100%;">
+                            <!-- Fix image URL handling -->
+                            @if(Str::startsWith($image->image_url, ['http://', 'https://']))
+                                <img src="{{ $image->image_url }}" alt="{{ $product->name }}" class="img-fluid rounded" style="width: 100%;">
+                            @else
+                                <img src="{{ asset(ltrim($image->image_url, '/')) }}" alt="{{ $product->name }}" class="img-fluid rounded" style="width: 100%;">
+                            @endif
                         </div>
                     @endforeach
                 @else

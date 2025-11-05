@@ -19,7 +19,7 @@ class ManagerDashboardController extends Controller
         $user = Auth::user();
         $warehouseId = null;
 
-        if ($user && $user->role->name === 'Inventory Manager' && $user->warehouse_id) {
+        if ($user && $user->role->name === 'manager' && $user->warehouse_id) {
             $warehouseId = $user->warehouse_id;
         }
 

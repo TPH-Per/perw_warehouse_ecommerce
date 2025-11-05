@@ -27,9 +27,8 @@ class ShipmentFactory extends Factory
             'shipping_method_id' => $shippingMethods->isNotEmpty() ? $shippingMethods->random()->id : ShippingMethod::factory(),
             'tracking_number' => $this->faker->uuid,
             'carrier' => $this->faker->company,
-            'status' => $this->faker->randomElement(['pending', 'in_transit', 'delivered', 'failed']),
+            'status' => $this->faker->randomElement(['pending', 'shipped', 'in_transit', 'delivered', 'returned', 'failed']),
             'shipped_at' => $this->faker->dateTimeThisMonth,
-            'estimated_delivery' => $this->faker->dateTimeThisMonth,
             'delivered_at' => $this->faker->dateTimeThisMonth,
         ];
     }

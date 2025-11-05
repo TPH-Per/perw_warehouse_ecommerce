@@ -3,12 +3,11 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\ProductController;
-use App\Http\Controllers\Api\AuthApiController;
-use App\Http\Controllers\Api\CartApiController;
 use App\Http\Controllers\Api\OrderApiController;
-use App\Http\Controllers\Api\ProfileApiController;
 use App\Http\Controllers\Api\CategoryApiController;
-use App\Http\Controllers\Api\UtilityApiController;
+use App\Http\Controllers\Api\CartApiController;
+use App\Http\Controllers\Api\AuthApiController;
+use App\Http\Controllers\Api\ProvinceController;
 
 /*
 |--------------------------------------------------------------------------
@@ -23,24 +22,27 @@ use App\Http\Controllers\Api\UtilityApiController;
 
 // Public routes
 Route::prefix('auth')->group(function () {
-    Route::post('/register', [AuthApiController::class, 'register']);
     Route::post('/login', [AuthApiController::class, 'login']);
+    Route::post('/register', [AuthApiController::class, 'register']);
 });
 
-// Public product routes
-Route::apiResource('products', ProductController::class)->only(['index', 'show']);
+Route::get('/provinces', [ProvinceController::class, 'index']);
+Route::get('/provinces/list', [ProvinceController::class, 'list']);
+
+// Public product and category routes
+Route::get('/products', [ProductController::class, 'index']);
+Route::get('/products/{id}', [ProductController::class, 'show']);
 Route::get('/products/slug/{slug}', [ProductController::class, 'showBySlug']);
 Route::get('/products/featured', [ProductController::class, 'featured']);
 Route::get('/products/search', [ProductController::class, 'search']);
 
-// Public utility routes
-Route::get('/orders/track/{orderCode}', [OrderApiController::class, 'track']);
 Route::get('/categories', [CategoryApiController::class, 'index']);
 Route::get('/categories/{id}/products', [CategoryApiController::class, 'products']);
-Route::get('/payment-methods', [UtilityApiController::class, 'paymentMethods']);
-Route::get('/shipping-methods', [UtilityApiController::class, 'shippingMethods']);
 
-// Protected customer routes
+// Public order tracking
+Route::get('/orders/track/{orderCode}', [OrderApiController::class, 'track']);
+
+// Authenticated API routes only
 Route::middleware('auth:sanctum')->group(function () {
     // Auth routes
     Route::prefix('auth')->group(function () {
@@ -48,40 +50,22 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/user', [AuthApiController::class, 'user']);
     });
 
-    // Cart routes
-    Route::prefix('cart')->group(function () {
-        Route::get('/', [CartApiController::class, 'index']);
-        Route::post('/items', [CartApiController::class, 'store']);
-        Route::put('/items/{itemId}', [CartApiController::class, 'update']);
-        Route::delete('/items/{itemId}', [CartApiController::class, 'destroy']);
-        Route::delete('/', [CartApiController::class, 'clear']);
-    });
-
-    // Order routes
+    // Order management routes (for admin/manager)
     Route::prefix('orders')->group(function () {
         Route::get('/', [OrderApiController::class, 'index']);
-        Route::post('/', [OrderApiController::class, 'store']);
         Route::get('/{id}', [OrderApiController::class, 'show']);
+        Route::post('/', [OrderApiController::class, 'store']);
         Route::post('/{id}/cancel', [OrderApiController::class, 'cancel']);
     });
 
-    // (moved) Public order tracking is now outside auth
-
-    // Profile routes
-    Route::prefix('profile')->group(function () {
-        Route::get('/', [ProfileApiController::class, 'show']);
-        Route::put('/', [ProfileApiController::class, 'update']);
-        Route::put('/password', [ProfileApiController::class, 'changePassword']);
-
-        // Address routes
-        Route::get('/addresses', [ProfileApiController::class, 'getAddresses']);
-        Route::post('/addresses', [ProfileApiController::class, 'createAddress']);
-        Route::get('/addresses/{id}', [ProfileApiController::class, 'getAddress']);
-        Route::put('/addresses/{id}', [ProfileApiController::class, 'updateAddress']);
-        Route::delete('/addresses/{id}', [ProfileApiController::class, 'deleteAddress']);
-        Route::post('/addresses/{id}/default', [ProfileApiController::class, 'setDefaultAddress']);
-
-        // Order history
-        Route::get('/orders', [ProfileApiController::class, 'getOrderHistory']);
+    Route::prefix('cart')->group(function () {
+        Route::get('/', [CartApiController::class, 'index']);
+        Route::post('/items', [CartApiController::class, 'store']);
+        Route::put('/items/{item}', [CartApiController::class, 'update']);
+        Route::delete('/items/{item}', [CartApiController::class, 'destroy']);
+        Route::delete('/', [CartApiController::class, 'clear']);
     });
+
+    // Province routes (for admin/manager)
+    Route::get('/provinces/warehouse/{province}', [ProvinceController::class, 'getWarehouse']);
 });

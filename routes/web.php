@@ -10,13 +10,7 @@ use App\Http\Controllers\Payment\VnpayController;
 use App\Http\Controllers\Payment\TestQrController;
 use App\Http\Controllers\AuthController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\EndUser\HomeController as EndUserHomeController;
-use App\Http\Controllers\EndUser\ProductController as EndUserProductController;
-use App\Http\Controllers\EndUser\AuthController as EndUserAuthController;
-use App\Http\Controllers\EndUser\CartController as EndUserCartController;
 use App\Http\Middleware\EnsureEndUserAuthenticated;
-use App\Http\Controllers\EndUser\CheckoutController as EndUserCheckoutController;
-use App\Http\Controllers\EndUser\OrderController as EndUserOrderController;
 use Illuminate\Support\Facades\Log;
 
 /*
@@ -35,36 +29,10 @@ Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
-// Public Routes
-Route::get('/', [EndUserHomeController::class, 'index'])->name('enduser.home');
-
-// End-user product routes
-Route::get('/product/{id}', [EndUserProductController::class, 'show'])->name('enduser.product');
-
-// End-user auth routes (web guard)
-Route::get('/enduser/login', [EndUserAuthController::class, 'showLogin'])->name('enduser.login');
-Route::post('/enduser/login', [EndUserAuthController::class, 'login']);
-Route::get('/enduser/register', [EndUserAuthController::class, 'showRegister'])->name('enduser.register');
-Route::post('/enduser/register', [EndUserAuthController::class, 'register']);
-Route::post('/enduser/logout', [EndUserAuthController::class, 'logout'])->name('enduser.logout');
-
-// End-user cart (protected)
-Route::middleware([EnsureEndUserAuthenticated::class])->group(function () {
-    Route::get('/cart', [EndUserCartController::class, 'index'])->name('enduser.cart');
-    Route::post('/cart/add', [EndUserCartController::class, 'add'])->name('enduser.cart.add');
-    Route::post('/cart/{detailId}/update', [EndUserCartController::class, 'update'])->name('enduser.cart.update');
-    Route::post('/cart/{detailId}/remove', [EndUserCartController::class, 'remove'])->name('enduser.cart.remove');
-
-    // Checkout
-    Route::get('/checkout', [EndUserCheckoutController::class, 'show'])->name('enduser.checkout');
-    Route::post('/checkout', [EndUserCheckoutController::class, 'place'])->name('enduser.checkout.place');
-
-    // Orders
-    Route::get('/orders', [EndUserOrderController::class, 'index'])->name('enduser.orders');
-    Route::get('/orders/{id}', [EndUserOrderController::class, 'show'])->name('enduser.order.show');
-    Route::get('/orders/{id}/confirmation', [EndUserOrderController::class, 'confirmation'])->name('enduser.order.confirmation');
-    Route::post('/orders/{id}/cancel', [EndUserOrderController::class, 'cancel'])->name('enduser.order.cancel');
-});
+// Redirect root to login for unauthenticated users
+Route::get('/', function () {
+    return redirect()->route('login');
+})->name('home');
 
 // VNPAY Payment Routes
 Route::prefix('payment/vnpay')->name('payment.vnpay.')->group(function () {
@@ -130,7 +98,7 @@ Route::get('/test-user-filter', function () {
 })->middleware('auth', 'admin')->name('test.user.filter');
 
 // Inventory Manager Routes (Protected by authentication and manager role)
-Route::middleware(['auth', 'manager'])->prefix('manager')->name('manager.')->group(function () {
+Route::middleware(['auth', App\Http\Middleware\IsInventoryManager::class])->prefix('manager')->name('manager.')->group(function () {
     // Dashboard
         Route::get('/dashboard', [App\Http\Controllers\Manager\ManagerDashboardController::class, 'index'])->name('dashboard');
 
@@ -173,7 +141,7 @@ Route::middleware(['auth', 'manager'])->prefix('manager')->name('manager.')->gro
 });
 
 // Admin Routes (Protected by authentication and admin role)
-Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['auth', App\Http\Middleware\IsAdmin::class])->prefix('admin')->name('admin.')->group(function () {
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/statistics', [DashboardController::class, 'getStatistics'])->name('dashboard.statistics');

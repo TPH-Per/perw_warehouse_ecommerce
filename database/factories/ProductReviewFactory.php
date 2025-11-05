@@ -23,8 +23,11 @@ class ProductReviewFactory extends Factory
             'product_id' => Product::factory(),
             'user_id' => User::factory(),
             'rating' => $this->faker->numberBetween(1, 5),
-            'title' => $this->faker->sentence,
-            'content' => $this->faker->paragraph,
+            'comment' => $this->faker->paragraph,
+            'is_approved' => $this->faker->boolean,
+            'created_at' => $this->faker->dateTimeThisYear,
+            'updated_at' => $this->faker->dateTimeThisYear,
+            'deleted_at' => $this->faker->dateTimeThisYear,
             'status' => $this->faker->randomElement(['pending', 'approved', 'rejected']),
         ];
     }
