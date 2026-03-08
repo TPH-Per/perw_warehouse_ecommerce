@@ -13,6 +13,7 @@ PerW is a comprehensive Laravel-based e-commerce platform specifically designed 
 - [Available Commands](#available-commands)
 - [API Documentation](#api-documentation)
 - [Admin Panel](#admin-panel)
+- [Manager Panel](#manager-panel)
 - [Development](#development)
 - [Testing](#testing)
 - [Deployment](#deployment)
@@ -22,42 +23,59 @@ PerW is a comprehensive Laravel-based e-commerce platform specifically designed 
 
 ## Features
 
-### E-commerce Functionality
-- Product catalog with categories and suppliers
-- Product variants (SKU, pricing, specifications)
-- Shopping cart system
-- Order processing workflow
-- Payment integration (VNPAY sandbox)
-- Shipping management
-- Customer account management
-- Address book
-- Order history
-- Product review system with admin approval
+### E-commerce Functionality (Customer API)
+- Product catalog with category filtering, search, and price range filter
+- Product variants (SKU, pricing, weight, dimensions)
+- Shopping cart management (add, update, remove, clear)
+- Cart organized by warehouse buckets (Hanoi, HCMC, Binh Dinh)
+- Order creation with automatic inventory deduction
+- Order cancellation with inventory restoration
+- Public order tracking by order code
+- Order history and status tracking
+- User profile management (name, email, phone)
+- Multiple address management with default address
+- Product reviews (only approved reviews shown publicly)
+
+### Payment Processing
+- VNPAY payment gateway integration (QR code and card)
+- Cash on Delivery (COD) payment method
+- Payment status tracking (pending / completed / failed / refunded)
+- Local test QR payment mode for development
 
 ### Warehouse Management
-- Multi-warehouse inventory tracking
-- Real-time stock level monitoring
-- Inventory reservations
-- Inbound and outbound transaction logging
-- Stock adjustments and transfers between warehouses
-- Low stock alerts
-- Reorder level management
+- Three warehouses: Hanoi (North), Ho Chi Minh City (South), Binh Dinh (Central)
+- Automatic warehouse assignment based on customer's province
+- Multi-warehouse inventory tracking per product variant
+- Inbound receipt recording (single and batch)
+- Outbound stock deduction on order creation
+- Inventory reservations tracking
+- Stock adjustments and inter-warehouse transfers
+- Low stock alerts and reorder level management
+- Full inventory transaction history (inbound / outbound)
 
 ### Admin Panel
-- Comprehensive dashboard with analytics
-- Product management (CRUD operations)
-- Order management and fulfillment
-- Customer management
-- Inventory control
-- User role management
-- Reporting and statistics
+- Comprehensive dashboard with key metrics and charts
+- Full product management (CRUD, variants, images, categories, suppliers)
+- Bulk product status updates
+- Order management (processing, shipment creation, status updates, cancellation)
+- CSV export for orders and users
+- Customer/user management (activate, suspend, password reset)
+- Inventory management (inbound, adjust, transfer, statistics, export)
+- User statistics and analytics
+
+### Manager Panel (Warehouse-scoped)
+- Warehouse-specific dashboard
+- Inventory management limited to assigned warehouse
+- Direct sales / walk-in customer orders (no shipping required)
+- Shipping order management (view and update status + tracking)
+- Product inventory visibility limited to assigned warehouse
 
 ### Security & Authentication
-- Role-based access control (Admin, Inventory Manager, Customer)
-- Secure authentication system
-- Password encryption
-- CSRF protection
-- Input validation
+- Role-based access control: `admin`, `manager` (inventory), `endUser` (customer)
+- Laravel Sanctum token authentication for API
+- Web session authentication for admin/manager panels
+- Account activation and suspension
+- CSRF protection and input validation
 
 ## Technology Stack
 
@@ -218,47 +236,65 @@ composer run test
 The system provides a RESTful API for client applications:
 
 ### Public Endpoints
-- `POST /api/auth/register`: Customer registration
-- `POST /api/auth/login`: Customer login
-- `GET /api/products`: List products
-- `GET /api/products/{id}`: Get product details
-- `GET /api/products/slug/{slug}`: Get product by slug
-- `GET /api/products/featured`: Get featured products
-- `GET /api/products/search`: Search products
+- `POST /api/auth/register` — Customer registration
+- `POST /api/auth/login` — Customer login
+- `GET /api/products` — List products (search, category, price range filter)
+- `GET /api/products/{id}` — Get product details with variants, images, reviews
+- `GET /api/products/slug/{slug}` — Get product by slug
+- `GET /api/products/featured` — Get 8 featured products
+- `GET /api/products/search?q=` — Search products by name/description
+- `GET /api/categories` — List categories with product counts
+- `GET /api/categories/{id}/products` — List products in category
+- `GET /api/orders/track/{orderCode}` — Track order by code
+- `GET /api/provinces` — List provinces grouped by warehouse cluster
+- `GET /api/provinces/list` — Flat list of all provinces
 
-### Protected Endpoints
-- `GET /api/auth/user`: Get authenticated user
-- `POST /api/auth/logout`: Logout
-- `GET /api/cart`: Get cart
-- `POST /api/cart`: Add to cart
-- `PUT /api/cart/{id}`: Update cart item
-- `DELETE /api/cart/{id}`: Remove from cart
-- `POST /api/orders`: Create order
-- `GET /api/orders`: List user orders
-- `GET /api/orders/{id}`: Get order details
+### Protected Endpoints (Bearer token required)
+- `GET /api/auth/user` — Get authenticated user profile
+- `POST /api/auth/logout` — Logout (revoke token)
+- `GET /api/cart` — Get cart with warehouse buckets and totals
+- `POST /api/cart/items` — Add item to cart (validates stock)
+- `PUT /api/cart/items/{item}` — Update cart item quantity
+- `DELETE /api/cart/items/{item}` — Remove item from cart
+- `DELETE /api/cart` — Clear entire cart
+- `GET /api/orders` — List user orders (paginated, filterable by status)
+- `GET /api/orders/{id}` — Get single order details
+- `POST /api/orders` — Create order from cart
+- `POST /api/orders/{id}/cancel` — Cancel order (restores inventory)
+- `GET /api/provinces/warehouse/{province}` — Get warehouse ID for a province
 
 ## Admin Panel
 
-The admin panel is accessible at `/admin` and provides:
+The admin panel is accessible at `/admin` (requires `admin` role) and provides:
 
 ### Dashboard
-- System overview with key metrics
-- Recent orders
-- Top selling products
-- Sales charts
-- Inventory alerts
+- System overview: total users, products, orders, revenue
+- Recent orders and top selling products (last 30 days)
+- Sales charts (last 7 days)
+- Order status distribution
+- Low stock inventory alerts
+- Recent user registrations
 
 ### Management Modules
-1. **Product Management**: Full CRUD for products and variants
-2. **Order Management**: Process orders, update status, manage shipments
-3. **Customer Management**: View and manage customer accounts
-4. **Inventory Control**: Monitor stock levels, adjust inventory, transfer between warehouses
-5. **User Management**: Admin user management with role assignments
+1. **Product Management**: Full CRUD for products, variants, images; bulk status updates; create categories and suppliers inline
+2. **Order Management**: View/update order status, create shipments, process payments (VNPAY / COD), cancel orders, export CSV
+3. **User Management**: Create/edit/suspend/activate users, assign roles and warehouse, change passwords, export CSV
+4. **Inventory Control**: Inbound receipts, adjustments, inter-warehouse transfers, statistics, export, reorder levels
+5. **Authentication**: Protected by `IsAdmin` middleware; session-based login
 
-### Authentication
-- Protected by `IsAdmin` middleware
-- Role-based access control
-- Session management
+## Manager Panel
+
+The manager panel is accessible at `/manager` (requires `manager` role and assigned warehouse) and provides:
+
+### Dashboard
+- Warehouse-specific inventory overview
+- Low stock alerts for assigned warehouse
+
+### Management Modules
+1. **Inventory Management**: Record inbound, view/adjust inventory — scoped to assigned warehouse only
+2. **Direct Sales**: Create walk-in/counter orders with immediate inventory deduction (no shipping)
+3. **Order Management**: View and update shipping orders assigned to the warehouse
+4. **Product Viewing**: Read-only product catalog with warehouse inventory levels
 
 ## Development
 
