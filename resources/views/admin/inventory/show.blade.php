@@ -139,7 +139,6 @@
                         <select class="form-select" id="type" name="type" required>
                             <option value="inbound">Nhập kho (Tăng tồn)</option>
                             <option value="outbound">Xuất kho (Giảm tồn)</option>
-                            <option value="adjustment">Điều chỉnh (Đặt số lượng chính xác)</option>
                         </select>
                     </div>
                     <div class="mb-3">

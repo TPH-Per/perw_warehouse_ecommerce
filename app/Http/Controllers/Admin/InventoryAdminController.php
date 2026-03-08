@@ -199,76 +199,6 @@ class InventoryAdminController extends AdminController
     }
 
     /**
-     * Show the form for editing the specified inventory.
-     */
-    public function edit(Inventory $inventory)
-    {
-        $user = Auth::user();
-
-        // Only inventory managers and admins can edit inventory records
-        if ($user && $user->role->name !== 'manager' && $user->role->name !== 'admin') {
-            return back()->with('error', 'Unauthorized access.');
-        }
-
-        // Check if user has access to this inventory
-        if ($user && $user->role->name === 'manager' && $user->warehouse_id) {
-            if ($inventory->warehouse_id !== $user->warehouse_id) {
-                return back()->with('error', 'Unauthorized access to this inventory.');
-            }
-        }
-
-        $inventory->load(['productVariant.product', 'warehouse']);
-        $warehouses = Warehouse::all();
-
-        // Return appropriate view based on user role
-        $viewPrefix = ($user && ($user->role->name === 'manager')) ? 'manager' : 'admin';
-        return view("{$viewPrefix}.inventory.edit", compact('inventory', 'warehouses'));
-    }
-
-    /**
-     * Update the specified inventory in storage.
-     */
-    public function update(Request $request, Inventory $inventory)
-    {
-        $user = Auth::user();
-
-        // Only inventory managers and admins can update inventory records
-        if ($user && $user->role->name !== 'manager' && $user->role->name !== 'admin') {
-            return back()->with('error', 'Unauthorized access.');
-        }
-
-        // Check if user has access to this inventory
-        if ($user && $user->role->name === 'manager' && $user->warehouse_id) {
-            if ($inventory->warehouse_id !== $user->warehouse_id) {
-                return back()->with('error', 'Unauthorized access to this inventory.');
-            }
-        }
-
-        $validator = Validator::make($request->all(), [
-            'quantity_on_hand' => 'required|integer|min:0',
-            'quantity_reserved' => 'required|integer|min:0',
-            'reorder_level' => 'required|integer|min:0',
-        ]);
-
-        if ($validator->fails()) {
-            return back()->withErrors($validator)->withInput();
-        }
-
-        try {
-            // Update inventory record
-            $inventory->update([
-                'quantity_on_hand' => $request->quantity_on_hand,
-                'quantity_reserved' => $request->quantity_reserved,
-                'reorder_level' => $request->reorder_level,
-            ]);
-
-            return redirect()->route('manager.inventory.show', $inventory->id)->with('success', 'Inventory record updated successfully!');
-        } catch (\Exception $e) {
-            return back()->with('error', 'Failed to update inventory record: ' . $e->getMessage());
-        }
-    }
-
-    /**
      * Store a newly created inventory record
      */
     public function store(Request $request)
@@ -373,8 +303,8 @@ class InventoryAdminController extends AdminController
         }
 
         $validator = Validator::make($request->all(), [
-            'quantity' => 'required|integer',
-            'type' => 'required|in:inbound,outbound,adjustment',
+            'quantity' => 'required|integer|min:1',
+            'type' => 'required|in:inbound,outbound',
             'reference_number' => 'nullable|string|max:255',
             'notes' => 'nullable|string|max:500',
         ]);
@@ -409,30 +339,20 @@ class InventoryAdminController extends AdminController
         try {
             DB::beginTransaction();
 
-            // Calculate new quantity based on transaction type
-            $newQuantity = $inventory->quantity_on_hand;
-            if ($transactionType === 'adjustment' && $quantity > 0) {
-                $newQuantity += abs($quantity);
-            } elseif ($transactionType === 'outbound' || ($transactionType === 'adjustment' && $quantity < 0)) {
-                $newQuantity -= abs($quantity);
-            }
+            // Only outbound reaches here (inbound returned early above)
+            $newQuantity = $inventory->quantity_on_hand - $quantity;
 
             // Prevent negative inventory
             if ($newQuantity < 0) {
                 return back()->with('error', 'Insufficient inventory. Cannot reduce below zero.');
             }
 
-            // Create transaction record using product_variant_id and warehouse_id
-            $transactionQuantity = abs($quantity);
-            if ($transactionType === 'outbound' || ($transactionType === 'adjustment' && $quantity < 0)) {
-                $transactionQuantity = -abs($quantity);
-            }
-
-            $transaction = InventoryTransaction::create([
+            // Create outbound transaction record
+            InventoryTransaction::create([
                 'product_variant_id' => $inventory->product_variant_id,
                 'warehouse_id' => $inventory->warehouse_id,
-                'type' => $transactionType,
-                'quantity' => $transactionQuantity,
+                'type' => 'outbound',
+                'quantity' => -$quantity,
                 'notes' => $note,
             ]);
 

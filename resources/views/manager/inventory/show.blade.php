@@ -152,7 +152,6 @@
                         <select class="form-select" name="type" required>
                             <option value="inbound">Nhập kho (Thêm hàng tồn)</option>
                             <option value="outbound">Xuất kho (Giảm hàng tồn)</option>
-                            <option value="adjustment">Điều chỉnh</option>
                         </select>
                     </div>
                     <div class="mb-3">
@@ -171,15 +170,6 @@
                         <i class="bi bi-check-circle"></i> Thực hiện
                     </button>
                 </form>
-            </div>
-        </div>
-
-        <!-- Edit Inventory Button -->
-        <div class="card mt-3">
-            <div class="card-body text-center">
-                <a href="{{ route('manager.inventory.edit', $inventory->id) }}" class="btn btn-primary w-100">
-                    <i class="bi bi-pencil"></i> Chỉnh sửa thông tin tồn kho
-                </a>
             </div>
         </div>
 
